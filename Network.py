@@ -65,17 +65,17 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
 
     if domestic_only:
         MImport = MLoad + MChargePH + MSpillage + \
-                - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit # EIM(t, j), MW
+                - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit #  MW
     else:
         MImport = MLoad + MChargePH +  MSpillage\
-              - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW
+              - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # MW
     
     coverage = solution.coverage
     if len(coverage) > 1:
 
        # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 
-        #these are the external node so calculation woulde be −1 × 𝑅𝑒𝑞𝑢𝑖𝑟𝑒𝑑 𝐼𝑚𝑝𝑜𝑟𝑡 (𝑡, GI) 
+        #these are the external node 
         TISP =  -1 * MImport[:, np.where(Nodel=='TI')[0][0]] if 'TI' in coverage else np.zeros(intervals)
         GILP =  -1 * MImport[:, np.where(Nodel=='GI')[0][0]] if 'GI' in coverage else np.zeros(intervals)
         KIEP =  1 * MImport[:, np.where(Nodel=='KI')[0][0]] if 'KI' in coverage else np.zeros(intervals)
@@ -99,10 +99,10 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     else:
         TDC = np.zeros((intervals, len(solution.TLoss)))
     if output:
-        MStoragePH = np.tile(solution.StoragePH, (nodes, 1)).transpose() * pcfactor # SPH(t, j), MWh
+        MStoragePH = np.tile(solution.StoragePH, (nodes, 1)).transpose() * pcfactor  # MWh
         solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking, solution.MWind = (MPV, MIndia, MBaseload, MPeaking)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
-        #solution.MBaseload_exp, solution.MPV_exp, solution.MPeaking_exp = (MBaseload_exp, MPV_exp, MPeaking_exp)
+       
 
     return TDC
