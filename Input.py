@@ -6,12 +6,6 @@
 import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
-###### NODAL LISTS ######
-# Nodel = np.array(['CH', 'TH', 'TS', 'SA', 'ZH', 'PE', 'MO', 'IN1', 'IN2', 'IN3', 'IN4'])
-# PVl =   np.array(['CH']*1 + ['TH']*1 + ['TS']*1 + ['SA']*1 + ['ZH']*1 + ['PE']*1 + ['MO']*1)
-# Windl = np.array(['TH']*2)
-# Interl = np.array(['IN1']*1 + ['IN2']*1 + ['IN3']*1 + ['IN4']*1) if ((node=='Super') & import_flag) else np.array([]) # Add external interconnections if ASEAN Power Grid scenario
-
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
 pv_ub_np = np.array([6800.] + [6500.] + [10000.] + [1750.] + [3000.] + [12000.] + [7500.])
@@ -143,9 +137,8 @@ class Solution:
         self.daily_peaking = daily_peaking
 
         self.CPV = list(x[: pidx]) # CPV(i), GW
-        #self.CWind = list(x[pidx: widx]) # CWind(i), GW
         self.GPV = TSPV * np.tile(self.CPV, (intervals, 1)) * pow(10, 3) # GPV(i, t), GW to MW
-        # self.GWind = TSWind * np.tile(self.CWind, (intervals, 1)) * pow(10, 3) # GWind(i, t), GW to MW
+       
 
         self.CPHP = list(x[phidx]) # CPHP(j), GW
         self.CPHS = x[phidx] # S-CPHS(j), GWh
