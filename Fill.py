@@ -99,6 +99,6 @@ def Analysis(optimisation_x,suffix):
     return True
 
 if __name__=='__main__':
-    suffix = "_Super_existing_6_True.csv"
+    suffix = "_Super_existing_20_True.csv"
     optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     Analysis(optimisation_x,suffix)

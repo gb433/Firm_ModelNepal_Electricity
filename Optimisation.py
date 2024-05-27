@@ -41,7 +41,7 @@ def F(x):
 
     if import_flag == True:
         # Simulation with only baseload
-        Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, DischargePond1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals), daily_peaking=daily_peaking, peaking_hours=peaking_hours)
+        Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, DischargePeaking1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals), daily_peaking=daily_peaking, peaking_hours=peaking_hours)
         Max_deficit1 = np.reshape(Deficit1, (-1, 8760)).sum(axis=-1) # MWh per year
         PIndia = Deficit1.max() * pow(10, -3) # GW
 
@@ -51,7 +51,7 @@ def F(x):
         PenEnergy = 0
         
         # Simulation with baseload, all existing capacity, and all hydrogen
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_pondage=daily_peaking, peaking_hours=peaking_hours)
+        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking, peaking_hours=peaking_hours)
 
         # Deficit penalty function
         PenDeficit = max(0, Deficit.sum() * resolution - S.allowance)
@@ -60,7 +60,7 @@ def F(x):
         india_imports = np.clip(Deficit1, 0, CIndia.sum() * pow(10,3)) # MW
 
         # Simulation using the existing capacity generation profiles - required for storage average annual discharge
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePond, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
+        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
 
         # Discharged energy from storage systems
         GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
@@ -97,7 +97,7 @@ def F(x):
     GIndia = resolution * india_imports.sum() / years / efficiencyPH
 
     # Levelised cost of electricity calculation
-    cost = factor * np.array([sum(S.CPV), GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CDC) + [sum(S.CPV), (GHydro) * pow(10, -6)]) # $b p.a.
+    cost = factor * np.array([sum(S.CPV),0, GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CDC) + [sum(S.CPV),0, (GHydro) * pow(10, -6)]) # $b p.a.
     cost = cost.sum()
     loss = np.sum(abs(TDC), axis=0) * TLoss
     loss = loss.sum() * pow(10, -9) * resolution / years # PWh p.a.

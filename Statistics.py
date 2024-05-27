@@ -251,7 +251,7 @@ def Information(x, flexible):
 
     if 'Super' not in node:
         S.MPV = S.GPV
-        S.MWind = np.zeros((intervals, 1))#S.GWind if S.GWind.shape[1]>0 else np.zeros((intervals, 1))
+        #S.MWind = np.zeros((intervals, 1))#S.GWind if S.GWind.shape[1]>0 else np.zeros((intervals, 1))
         S.MIndia = S.GIndia
         S.MDischargePH = np.tile(S.DischargePH, (nodes, 1)).transpose()
         S.MDeficit = np.tile(S.Deficit, (nodes, 1)).transpose()

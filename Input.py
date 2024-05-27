@@ -6,18 +6,18 @@
 import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
+
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
-pv_ub_np = np.array([6800.] + [6500.] + [10000.] + [1750.] + [3000.] + [12000.] + [7500.])
-phes_ub_np = np.array([2000.] + [2000.] + [3000.] + [500.] + [1000.] + [3500.] + [2000.] +[0.] + [0.] + [0.] + [0.])
+
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
 resolution = 1
 
 ###### DATA IMPORTS ######
-MLoad = np.genfromtxt('Data/electricity{}.csv'.format(percapita), delimiter=',', skip_header=1, usecols=range(4, 4+len(Nodel))) #MW
-TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(4, 4+len(PVl))) #  MW
-
+MLoad = np.genfromtxt('Data/electricity{}.csv'.format(percapita), delimiter=',', skip_header=1, usecols=range(4, 4+len(Nodel))) # EOLoad(t, j), MW
+TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(4, 4+len(PVl))) # TSPV(t, i), MW
+# TSWind = np.genfromtxt('Data/wind.csv', delimiter=',', skip_header=1, usecols=range(4, 4+len(Windl))) # TSWind(t, i), MW
 
 assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
@@ -26,11 +26,12 @@ if scenario == 'existing':
     expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
 
 
-CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] #MW to GW
+CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(hydrol)), encoding=None).astype(float)
+#indiaExportProfiles = hydroProfiles[:,1] # Tala power station is full export to India
 peaking_hours = 4
-# Calculate baseload and daily peaking
+# Calculate baseload and daily pondage
 baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
 daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
 
@@ -137,10 +138,11 @@ class Solution:
         self.daily_peaking = daily_peaking
 
         self.CPV = list(x[: pidx]) # CPV(i), GW
+        #self.CWind = list(x[pidx: widx]) # CWind(i), GW
         self.GPV = TSPV * np.tile(self.CPV, (intervals, 1)) * pow(10, 3) # GPV(i, t), GW to MW
-       
+        # self.GWind = TSWind * np.tile(self.CWind, (intervals, 1)) * pow(10, 3) # GWind(i, t), GW to MW
 
-        self.CPHP = list(x[phidx]) # CPHP(j), GW
+        self.CPHP = [x[phidx]] # CPHP(j), GW
         self.CPHS = x[phidx] # S-CPHS(j), GWh
         self.efficiencyPH = efficiencyPH
 
