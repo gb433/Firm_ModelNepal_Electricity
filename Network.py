@@ -18,7 +18,7 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     MPV, MBaseload, MPeaking = map(np.zeros, [(nodes, intervals)] * 3)
     for i, j in enumerate(Nodel):
         MPV[i, :] = solution.GPV[:, np.where(PVl==j)[0]].sum(axis=1)
-      
+        # MWind[i, :] = solution.GWind[:, np.where(Windl==j)[0]].sum(axis=1)
         MBaseload[i, :] = solution.baseload[:, np.where(Hydrol==j)[0]].sum(axis=1)
         MPeaking[i, :] = MPeaking_long[:, np.where(Hydrol==j)[0]].sum(axis=1)
     MPV, MBaseload, MPeaking = (MPV.transpose(), MBaseload.transpose(), MPeaking.transpose()) # Sij-GPV(t, i), Sij-GWind(t, i), MW
@@ -28,7 +28,12 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     defactor = MLoad / MLoad.sum(axis=1)[:, None]
     MDeficit = np.tile(solution.Deficit, (nodes, 1)).transpose() * defactor # MDeficit: EDE(j, t)
 
-    CIndia = np.append(np.array([0]*nodes), np.nan_to_num(np.array(solution.CInter))) # GW
+    M_minFactors = np.full((intervals, nodes), pow(10,-9)) # Matrix of 10^(-9) required to distribute spillage between nodes when no solar generation
+    MPW = MPV + M_minFactors # + MWind
+    spfactor = np.divide(MPW, MPW.sum(axis=1)[:, None], where=MPW.sum(axis=1)[:, None]!=0)
+    MSpillage = np.tile(solution.Spillage, (nodes, 1)).transpose() * spfactor # MSpillage: ESP(j, t)
+
+    CIndia = np.append(np.array([0]*(nodes - len(solution.CInter))), np.nan_to_num(np.array(solution.CInter))) # GW
     CPHP = solution.CPHP
     pcfactor = np.tile(CPHP, (intervals, 1)) / sum(CPHP) if sum(CPHP) != 0 else 0
     MDischargePH = np.tile(solution.DischargePH, (nodes, 1)).transpose() * pcfactor # MDischarge: DPH(j, t)
@@ -42,7 +47,7 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     MIndia = np.tile(india_imports, (nodes, 1)).transpose() * ifactor
 
    
-    CHydro_nodes = np.zeros(nodes)
+    """CHydro_nodes = np.zeros(nodes)
     for j in range(0,len(Nodel)):
         CHydro_nodes[j] = solution.CHydro_max[expl==Nodel[j]].sum()
 
@@ -63,24 +68,24 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     PeakingDomestic = MChargePH.sum(axis=1) + MLoad.sum(axis=1) - MPV.sum(axis=1) - MIndia.sum(axis=1) - MBaseload.sum(axis=1) - MDischargePH.sum(axis=1) - MDeficit.sum(axis=1)
     PeakingDomestic[PeakingDomestic < 0] = 0
   
-    p1factor = np.divide(MPeaking, MPeaking.sum(axis=1)[:, None], where=MPeaking.sum(axis=1)[:, None]!=0)
+    p1factor = np.divide(MPeaking, MPeaking.sum(axis=1)[:, None], where=MPeaking.sum(axis=1)[:, None]!=0)"""
   
 
     if domestic_only:
-        MImport = MLoad + MChargePH + MSpillage + \
+        MImport = MLoad + MChargePH + MSpillage \
                 - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit # EIM(t, j), MW
-    else:
-        MImport = MLoad + MChargePH +  MSpillage\
-              - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW
+    #else:
+     #   MImport = MLoad + MChargePH +  MSpillage\
+      #        - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW
     
     coverage = solution.coverage
     if len(coverage) > 1:
 
        # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 
-        #these are the external node 
-        TISP =  -1 * MImport[:, np.where(Nodel=='TI')[0][0]] if 'TI' in coverage else np.zeros(intervals)
-        GILP =  -1 * MImport[:, np.where(Nodel=='GI')[0][0]] if 'GI' in coverage else np.zeros(intervals)
+        #these are the external node so calculation woulde be −1 × 𝑅𝑒𝑞𝑢𝑖𝑟𝑒𝑑 𝐼𝑚𝑝𝑜𝑟𝑡 (𝑡, GI) 
+        TISP =  1 * MImport[:, np.where(Nodel=='TI')[0][0]] if 'TI' in coverage else np.zeros(intervals)
+        GILP =  1 * MImport[:, np.where(Nodel=='GI')[0][0]] if 'GI' in coverage else np.zeros(intervals)
         KIEP =  1 * MImport[:, np.where(Nodel=='KI')[0][0]] if 'KI' in coverage else np.zeros(intervals)
         MIMP =  -1 * MImport[:, np.where(Nodel=='MI')[0][0]] if 'MI' in coverage else np.zeros(intervals)
        
@@ -89,16 +94,16 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         SPKP = -1 * MImport[:, np.where(Nodel=='SP')[0][0]] - TISP if 'SP' in coverage else np.zeros(intervals)
 
         #we need to calculate node to node connection so we need to substract in between node.
-        KPLP = MImport[:, np.where(Nodel=='KP')[0][0]] - SPKP  if 'KP' in coverage else np.zeros(intervals)
-        EPMP = -1 * MImport[:, np.where(Nodel=='EP')[0][0]] + KIEP if 'EP' in coverage else np.zeros(intervals)
-        LPGP = 1* MImport[:, np.where(Nodel=='LP')[0][0]] - GILP + KPLP if 'LP' in coverage else np.zeros(intervals)
-        GPBP = -1 * MImport[:, np.where(Nodel=='GP')[0][0]] + LPGP if 'GP' in coverage else np.zeros(intervals)
-        BPMP = 1 * MImport[:, np.where(Nodel=='BP')[0][0]] - GPBP  if 'BP' in coverage else np.zeros(intervals)
+        KPLP = 1 * MImport[:, np.where(Nodel=='KP')[0][0]] - SPKP  if 'KP' in coverage else np.zeros(intervals)
+        EPMP = -1 * MImport[:, np.where(Nodel=='EP')[0][0]] - KIEP if 'EP' in coverage else np.zeros(intervals)
+        LPGP = -1 * MImport[:, np.where(Nodel=='LP')[0][0]] - GILP - KPLP if 'LP' in coverage else np.zeros(intervals)
+        GPBP = 1 * MImport[:, np.where(Nodel=='GP')[0][0]] - LPGP if 'GP' in coverage else np.zeros(intervals)
+        BPMP = -1 * MImport[:, np.where(Nodel=='BP')[0][0]] - GPBP  if 'BP' in coverage else np.zeros(intervals)
         
         #Check the final node
         BPMP1 = 1 *  MImport[:, np.where(Nodel=='MP')[0][0]] - MIMP - EPMP if 'MP' in coverage else np.zeros(intervals)
         assert abs(BPMP - BPMP1).max() <= 0.1, print('BPMP Error', abs(BPMP - BPMP1).max())
-        TDC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW  
+        TDC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW
     else:
         TDC = np.zeros((intervals, len(solution.TLoss)))
     if output:
