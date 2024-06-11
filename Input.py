@@ -22,10 +22,8 @@ TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(
 assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 if scenario == 'existing':
-    hydrol = np.array(['SP']*3+['KP']*3+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
-    expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
-
-
+   hydrol =  np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1+['TI']*1+['GI']*1+['MI']*1+['KI']*1)
+    
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(hydrol)), encoding=None).astype(float)
@@ -142,7 +140,7 @@ class Solution:
         self.GPV = TSPV * np.tile(self.CPV, (intervals, 1)) * pow(10, 3) # GPV(i, t), GW to MW
         # self.GWind = TSWind * np.tile(self.CWind, (intervals, 1)) * pow(10, 3) # GWind(i, t), GW to MW
 
-        self.CPHP = [x[phidx]] # CPHP(j), GW
+        self.CPHP = list(x[pidx: phidx]) # CPHP(j), GW
         self.CPHS = x[phidx] # S-CPHS(j), GWh
         self.efficiencyPH = efficiencyPH
 
@@ -151,8 +149,7 @@ class Solution:
 
         self.Nodel, self.PVl, self.Hydrol = (Nodel, PVl, hydrol)
         self.Interl = Interl
-        # self.Windl = Windl
-        self.expl = expl
+        #self.expl = expl
         self.node = node
         self.scenario = scenario
         self.import_flag = import_flag
