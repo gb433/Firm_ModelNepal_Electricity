@@ -27,16 +27,14 @@ if scenario == 'existing':
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(hydrol)), encoding=None).astype(float)
-#indiaExportProfiles = hydroProfiles[:,1] # Tala power station is full export to India
-peaking_hours = 4
-# Calculate baseload and daily pondage
+
 baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
-daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
+
 
 for i in range(0, MLoad.shape[0]):
     for j in range(0, len(CHydro_RoR)):
-        baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
-        daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
+        baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) #if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
+        #daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
 
 ###### CONSTRAINTS ######
 # Energy constraints
@@ -133,7 +131,7 @@ class Solution:
         self.resolution = resolution
         self.baseload = baseload
         #self.indiaExportProfiles = indiaExportProfiles
-        self.daily_peaking = daily_peaking
+        #self.daily_peaking = daily_peaking
 
         self.CPV = list(x[: pidx]) # CPV(i), GW
         #self.CWind = list(x[pidx: widx]) # CWind(i), GW

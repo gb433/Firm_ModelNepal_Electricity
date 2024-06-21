@@ -5,23 +5,23 @@
 
 import numpy as np
 
-def Transmission(solution, domestic_only=False, export_only=False, output=False):
+def Transmission(solution, domestic_only=False, output=False):
     """TDC = Network.Transmission(S)"""
 
-    Nodel, PVl, Interl, Hydrol, expl = (solution.Nodel, solution.PVl, solution.Interl, solution.Hydrol, solution.expl)
+    Nodel, PVl, Interl, Hydrol = (solution.Nodel, solution.PVl, solution.Interl, solution.Hydrol)
     intervals, nodes, inters = (solution.intervals, solution.nodes, len(Interl))
     
-    CHydro_Peaking = solution.CHydro_Peaking
-    peakingfactor = np.tile(CHydro_Peaking, (intervals, 1)) / sum(CHydro_Peaking) if sum(CHydro_Peaking) != 0 else 0
-    MPeaking_long = np.tile(solution.DischargePeaking, (len(CHydro_Peaking), 1)).transpose() * peakingfactor 
+    #CHydro_Peaking = solution.CHydro_Peaking
+   # peakingfactor = np.tile(CHydro_Peaking, (intervals, 1)) / sum(CHydro_Peaking) if sum(CHydro_Peaking) != 0 else 0
+   # MPeaking_long = np.tile(solution.DischargePeaking, (len(CHydro_Peaking), 1)).transpose() * peakingfactor 
 
     MPV, MBaseload, MPeaking = map(np.zeros, [(nodes, intervals)] * 3)
     for i, j in enumerate(Nodel):
         MPV[i, :] = solution.GPV[:, np.where(PVl==j)[0]].sum(axis=1)
         # MWind[i, :] = solution.GWind[:, np.where(Windl==j)[0]].sum(axis=1)
         MBaseload[i, :] = solution.baseload[:, np.where(Hydrol==j)[0]].sum(axis=1)
-        MPeaking[i, :] = MPeaking_long[:, np.where(Hydrol==j)[0]].sum(axis=1)
-    MPV, MBaseload, MPeaking = (MPV.transpose(), MBaseload.transpose(), MPeaking.transpose()) # Sij-GPV(t, i), Sij-GWind(t, i), MW
+       # MPeaking[i, :] = MPeaking_long[:, np.where(Hydrol==j)[0]].sum(axis=1)
+    MPV, MBaseload = (MPV.transpose(), MBaseload.transpose()) # Sij-GPV(t, i), Sij-GWind(t, i), MW
     
     MLoad = solution.MLoad # EOLoad(t, j), MW
 
@@ -73,7 +73,7 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
 
     if domestic_only:
         MImport = MLoad + MChargePH + MSpillage \
-                - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit # EIM(t, j), MW
+                - MPV - MIndia - MBaseload - MDischargePH - MDeficit # EIM(t, j), MW
     #else:
      #   MImport = MLoad + MChargePH +  MSpillage\
       #        - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW
@@ -108,7 +108,7 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         TDC = np.zeros((intervals, len(solution.TLoss)))
     if output:
         MStoragePH = np.tile(solution.StoragePH, (nodes, 1)).transpose() * pcfactor #  MWh
-        solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking = (MPV, MIndia, MBaseload, MPeaking)
+        solution.MPV, solution.MIndia, solution.MBaseload = (MPV, MIndia, MBaseload)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
      

@@ -15,7 +15,7 @@ def Debug(solution):
     """Debugging"""
     Load, PV, India = (solution.MLoad.sum(axis=1), solution.GPV.sum(axis=1), solution.MIndia.sum(axis=1))
     Baseload = solution.MBaseload.sum(axis=1)
-    Peaking = solution.MPeaking.sum(axis=1)
+    #Peaking = solution.MPeaking.sum(axis=1)
 
     DischargePH, ChargePH, StoragePH = (solution.DischargePH, solution.ChargePH, solution.StoragePH)
     Deficit_energy, Deficit_power, Deficit, Spillage = (solution.Deficit_energy, solution.Deficit_power, solution.Deficit, solution.Spillage)
@@ -26,7 +26,7 @@ def Debug(solution):
     for i in range(intervals):
         # Energy supply-demand balance
         assert abs(Load[i] + ChargePH[i] + Spillage[i] \
-                   - PV[i] - India[i] - Baseload[i] - Peaking[i] - DischargePH[i] - Deficit[i]) <= 1
+                   - PV[i] - India[i] - Baseload[i] - DischargePH[i] - Deficit[i]) <= 1
 
         # Discharge, Charge and Storage
         if i==0:
@@ -56,9 +56,9 @@ def LPGM(solution):
     Debug(solution)
 
     C = np.stack([(solution.MLoad).sum(axis=1),
-                  solution.MBaseload.sum(axis=1), solution.MPeaking.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
+                  solution.MBaseload.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
                   solution.DischargePH, solution.Deficit, -1 * (solution.Spillage), -1 * solution.ChargePH,
-                  solution.StoragePH, solution.StoragePeaking,
+                  solution.StoragePH,
                   solution.SPKP, solution.KPLP, solution.LPGP, solution.GPBP, solution.BPMP, solution.EPMP, solution.TISP, solution.GILP, solution.MIMP, solution.KIEP])
        # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 
@@ -85,7 +85,7 @@ def LPGM(solution):
         for j in range(nodes):
 
             C = np.stack([(solution.MLoad)[:, j],
-                          solution.MBaseload[:, j] + solution.MPeaking[:, j],solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
+                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
                           solution.MDischargePH[:, j], solution.MDeficit[:, j], -1 * (solution.MSpillage[:, j]), Topology[j], 
                           -1 * solution.MChargePH[:, j],
                           solution.MStoragePH[:, j]])
@@ -111,7 +111,7 @@ def GGTA(solution):
 
     # Import generation energy [GWh] from the least-cost solution
    # Ghydro_CH2 = indiaExportProfiles.sum() 
-    GPV, GHydro, GIndia = map(lambda x: x * pow(10, -6) * resolution / years, (solution.GPV.sum(), solution.MBaseload.sum() + solution.MPeaking.sum() + solution.MIndia.sum())) # TWh p.a.
+    GPV, GHydro, GIndia = map(lambda x: x * pow(10, -6) * resolution / years, (solution.GPV.sum(), solution.MBaseload.sum()+ solution.MIndia.sum())) # TWh p.a.
     DischargePH = solution.DischargePH.sum()
     CFPV = GPV / CPV / 8.76 if CPV != 0 else 0
     # CFWind =  CWind / 8.76
@@ -237,7 +237,7 @@ def Information(x, flexible):
     print("Statistics start at", start)
 
     S = Solution(x)
-    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=flexible, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
+    Deficit_energy, Deficit_power, Deficit, DischargePH, Spillage = Reliability(S, baseload=baseload, india_imports=flexible)
 
     try:
         assert Deficit.sum() * resolution < 0.1, 'Energy generation and demand are not balanced.'
@@ -263,17 +263,17 @@ def Information(x, flexible):
 
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
     # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
-    S.Topology = np.array([S.TISP - S.SPKP,                     # SP
-                 (S.SPKP + S.KPLP),                             # KP
-                  S.GILP - S.KPLP + S.LPGP,                     # LP
-                  -1 * (S.LPGP + S.GPBP),                       # GP
-                  S.GPBP + S.BPMP,                              # BP
-                  (S.MIMP - S.BPMP + S.EPMP),                   # MP
-                  -1* (S.EPMP + S.KIEP),                        # EP
-                  -1 * S.TISP,                                  # TI
-                  -1 * S.GILP,                                  # GI
-                  -1 * S.MIMP,                                  # MI
-                  S.KIEP])                                      # KI
+    S.Topology = np.array(-1 * [S.TISP + S.SPKP,               # SP
+                 (S.SPKP + S.KPLP),                            # KP
+                 -1 * (S.GILP + S.KPLP + S.LPGP),              # LP
+                 (S.LPGP + S.GPBP),                            # GP
+                 -1 * (S.GPBP + S.BPMP),                       # BP
+                 (S.MIMP + S.BPMP + S.EPMP),                   # MP
+                 -1* (S.EPMP + S.KIEP),                        # EP
+                 S.TISP,                                       # TI
+                 -1 * S.GILP,                                  # GI
+                 -1 * S.MIMP,                                  # MI
+                 S.KIEP])                                      # KI
    
     LPGM(S)
     GGTA(S)
