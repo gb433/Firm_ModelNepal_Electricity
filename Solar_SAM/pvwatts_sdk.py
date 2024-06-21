@@ -59,8 +59,8 @@ def run_pvwatts_simulation(solar_resource_file, latitude, longitude, elevation, 
     pd.DataFrame(ac, columns=['ac']).to_csv(output_file, index=False)
 
 if __name__ == '__main__':
-    input_dir = '/Users/geetabhatta/DataScience/Tools/NREL_Output'
-    output_dir = '/Users/geetabhatta/DataScience/Tools/SAM_Output'
+    input_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/NREL_Output'
+    output_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/SAM_Output'
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
