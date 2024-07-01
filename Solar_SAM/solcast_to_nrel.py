@@ -59,8 +59,8 @@ def convert_nrel(input_csv, latitude, longitude, elevation, output_dir):
         df_year.to_csv(output_file, mode='a', index=False)
 
 if __name__ == '__main__':
-    input_dir = '/Users/geetabhatta/DataScience/Tools/Solcast'
-    output_dir = '/Users/geetabhatta/DataScience/Tools/NREL_Output'
+    input_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/Solcast'
+    output_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/NREL_Output'
 
     # Create the output directory if it does not exist
     os.makedirs(output_dir, exist_ok=True)
