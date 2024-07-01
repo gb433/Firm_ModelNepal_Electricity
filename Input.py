@@ -6,9 +6,10 @@
 import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
-
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
+pv_ub_np = np.array([250.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
+phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [1268.] + [942.] + [0.] + [0.] + [0.] + [0.])
 
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
@@ -20,21 +21,25 @@ TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(
 # TSWind = np.genfromtxt('Data/wind.csv', delimiter=',', skip_header=1, usecols=range(4, 4+len(Windl))) # TSWind(t, i), MW
 
 assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
-constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
+constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float
+
 if scenario == 'existing':
-   hydrol =  np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1+['TI']*1+['GI']*1+['MI']*1+['KI']*1)
-    
+    hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
+    # expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
+
+
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
-hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(hydrol)), encoding=None).astype(float)
-
+hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float
+#peaking_hours = 4
+# Calculate baseload and daily peaking
 baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
-
+daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
 
 for i in range(0, MLoad.shape[0]):
     for j in range(0, len(CHydro_RoR)):
-        baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) #if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
-        #daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
+        baseload[i,j] = hydroProfiles[i,j]
+        daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
 
 ###### CONSTRAINTS ######
 # Energy constraints
@@ -110,18 +115,18 @@ contingency_ph = list(0.25 * (MLoad).max(axis=0) * pow(10, -3))[:(nodes)] # MW t
 #manage = 0 # weeks
 allowance = min(0.00002*np.reshape(MLoad.sum(axis=1), (-1, 8760)).sum(axis=-1)) # Allowable annual deficit of 0.002%, MWh
 
+
 ###### DECISION VARIABLE UPPER BOUNDS ######
-pv_ub = [20.] * pzones
-#wind_ub = [0.71, 0.05]
-phes_ub = [20.] * nodes
-phes_s_ub = [200.]
-inters_ub = [20.] * inters if import_flag else []
+pv_ub = [x for x in pv_ub_np]
+phes_ub = [x for x in phes_ub_np]
+phes_s_ub = [10000.]
+inters_ub = [500.] * inters if node == 'Super' else inters * [0]
 
 ###### DECISION VARIABLE LOWER BOUNDS ######
 pv_lb = [.001] * pzones
 
 
-class Solution:
+class Solution: 
     """A candidate solution of decision variables CPV(i), CWind(i), CPHP(j), S-CPHS(j)"""
 
     def __init__(self, x):
@@ -131,13 +136,14 @@ class Solution:
         self.resolution = resolution
         self.baseload = baseload
         #self.indiaExportProfiles = indiaExportProfiles
-        #self.daily_peaking = daily_peaking
+        self.daily_peaking = daily_peaking
 
         self.CPV = list(x[: pidx]) # CPV(i), GW
         #self.CWind = list(x[pidx: widx]) # CWind(i), GW
         self.GPV = TSPV * np.tile(self.CPV, (intervals, 1)) * pow(10, 3) # GPV(i, t), GW to MW
         # self.GWind = TSWind * np.tile(self.CWind, (intervals, 1)) * pow(10, 3) # GWind(i, t), GW to MW
 
+        # self.CPHP = [x[phidx]] # CPHP(j), GW
         self.CPHP = list(x[pidx: phidx]) # CPHP(j), GW
         self.CPHS = x[phidx] # S-CPHS(j), GWh
         self.efficiencyPH = efficiencyPH
@@ -147,7 +153,7 @@ class Solution:
 
         self.Nodel, self.PVl, self.Hydrol = (Nodel, PVl, hydrol)
         self.Interl = Interl
-        #self.expl = expl
+        self.expl = expl
         self.node = node
         self.scenario = scenario
         self.import_flag = import_flag
