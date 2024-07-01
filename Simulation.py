@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def Reliability(solution, baseload, india_imports, start=None, end=None):
+def Reliability(solution, baseload, india_imports, daily_peaking, peaking_hours, start=None, end=None):
     """Deficit = Simulation.Reliability(S, hydro=...)"""
 
     ###### CALCULATE NETLOAD FOR EACH INTERVAL ######
@@ -16,37 +16,37 @@ def Reliability(solution, baseload, india_imports, start=None, end=None):
     solution.india_imports = india_imports # MW
 
     ###### CREATE STORAGE SYSTEM VARIABLES ######
-    Pcapacity_PH = sum(solution.CPHP) * pow(10, 3) # GW to MW
-    Scapacity_PH = solution.CPHS * pow(10, 3) #  GWh to MWh
+    Pcapacity_PH = sum(solution.CPHP) * pow(10, 3) # S-CPHP(j), GW to MW
+    Scapacity_PH = solution.CPHS * pow(10, 3) # S-CPHS(j), GWh to MWh
     #Pcapacity_Peaking = sum(solution.CHydro_Peaking) * pow(10, 3)
-    #Scapacity_Peaking = peaking_hours*Pcapacity_Peaking
+   # Scapacity_Peaking = peaking_hours*Pcapacity_Peaking
     efficiencyPH, resolution = (solution.efficiencyPH, solution.resolution)
 
-    DischargePH, ChargePH, StoragePH = map(np.zeros, [length] * 3)
+    DischargePH, ChargePH, StoragePH, DischargePeaking, StoragePeaking = map(np.zeros, [length] * 5)
     Deficit_energy, Deficit_power = map(np.zeros, [length] * 2)
     
-    #daily_peaking_divided = daily_peaking.sum(axis=1) / 24
+   # daily_peaking_divided = daily_peaking.sum(axis=1) / 24
 
     for t in range(length):
         ###### INITIALISE INTERVAL ######
         Netloadt = Netload[t]
         Storage_PH_t1 = StoragePH[t-1] if t>0 else 0.5 * Scapacity_PH
 
-        #Storage_Peaking_t1 = StoragePeaking[t-1] + daily_peaking_divided[t] if t>0 else 0.5*Scapacity_Peaking
+        """Storage_Peaking_t1 = StoragePeaking[t-1] + daily_peaking_divided[t] if t>0 else 0.5*Scapacity_Peaking
 
         # Calculate peaking discharge
-        #if Scapacity_Peaking < Storage_Peaking_t1:
-         #   Discharge_Peaking_t = daily_peaking_divided[t]
-        #else:
-         #   Discharge_Peaking_t = np.minimum(np.maximum(0, Netloadt), Pcapacity_Peaking)
-         #   Discharge_Peaking_t = np.minimum(Discharge_Peaking_t, Storage_Peaking_t1/resolution)
-        #Storage_Peaking_t = Storage_Peaking_t1 - Discharge_Peaking_t * resolution
+        if Scapacity_Peaking < Storage_Peaking_t1:
+            Discharge_Peaking_t = daily_peaking_divided[t]
+        else:
+            Discharge_Peaking_t = np.minimum(np.maximum(0, Netloadt), Pcapacity_Peaking)
+            Discharge_Peaking_t = np.minimum(Discharge_Peaking_t, Storage_Peaking_t1/resolution)
+        Storage_Peaking_t = Storage_Peaking_t1 - Discharge_Peaking_t * resolution
 
-        #DischargePeaking[t] = Discharge_Peaking_t
-        #StoragePeaking[t] = Storage_Peaking_t
+        DischargePeaking[t] = Discharge_Peaking_t
+        StoragePeaking[t] = Storage_Peaking_t
 
         ##### UPDATE STORAGE SYSTEMS ######
-        Netloadt = Netloadt #- Discharge_Peaking_t
+        Netloadt = Netloadt - Discharge_Peaking_t """
         Discharge_PH_t = min(max(0, Netloadt), Pcapacity_PH, Storage_PH_t1 / resolution)
         Charge_PH_t = min(-1 * min(0, Netloadt), Pcapacity_PH, (Scapacity_PH - Storage_PH_t1) / efficiencyPH / resolution)
         Storage_PH_t = Storage_PH_t1 - Discharge_PH_t * resolution + Charge_PH_t * resolution * efficiencyPH
@@ -69,6 +69,7 @@ def Reliability(solution, baseload, india_imports, start=None, end=None):
             Deficit_power[t] = 0    
 
     Deficit = Deficit_energy + Deficit_power
+    Netload = Netload - DischargePeaking
     Spillage = -1 * np.minimum(Netload + ChargePH - DischargePH, 0)
 
     ###### ERROR CHECKING ######
@@ -80,13 +81,13 @@ def Reliability(solution, baseload, india_imports, start=None, end=None):
     solution.DischargePH, solution.ChargePH, solution.StoragePH = (DischargePH, ChargePH, StoragePH)
     solution.Deficit_energy, solution.Deficit_power, solution.Deficit, solution.Spillage = (Deficit_energy, Deficit_power, Deficit, Spillage)
 
-    return Deficit_energy, Deficit_power, Deficit, DischargePH, Spillage
+    return Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage
 
 if __name__ == '__main__':
     from Input import *
     from Network import Transmission 
 
-    suffix = "_Super_existing_6_True.csv"
+    suffix = "_Super_existing_20_True.csv"
     Optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     
     # Initialise the optimisation
@@ -95,7 +96,7 @@ if __name__ == '__main__':
     CIndia = np.nan_to_num(np.array(S.CInter))
 
     # Simulation with only baseload
-    Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals))
+    Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, DischargePeaking1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals), daily_peaking=daily_peaking)
     Max_deficit1 = np.reshape(Deficit1, (-1, 8760)).sum(axis=-1) # MWh per year
     PIndia = Deficit1.max() * pow(10, -3) # GW
 
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     PenEnergy = 0
     
     # Simulation with baseload, all existing capacity, and all hydrogen
-    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3))
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking)
 
     # Deficit penalty function
     PenDeficit = max(0, Deficit.sum() * resolution - S.allowance)
@@ -114,7 +115,7 @@ if __name__ == '__main__':
     india_imports = np.clip(Deficit1, 0, CIndia.sum() * pow(10,3)) # MW
 
     # Simulation using the existing capacity generation profiles - required for storage average annual discharge
-    Deficit_energy, Deficit_power, Deficit, DischargePH, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports)
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking)
 
     # Discharged energy from storage systems
     GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
@@ -125,7 +126,6 @@ if __name__ == '__main__':
 
     # Transmission penalty function
     PenDC = 0
-
 
 
     # Average annual electricity generated by existing capacity
