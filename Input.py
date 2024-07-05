@@ -6,12 +6,6 @@
 import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
-###### NODAL LISTS ######
-# Nodel = np.array(['CH', 'TH', 'TS', 'SA', 'ZH', 'PE', 'MO', 'IN1', 'IN2', 'IN3', 'IN4'])
-# PVl =   np.array(['CH']*1 + ['TH']*1 + ['TS']*1 + ['SA']*1 + ['ZH']*1 + ['PE']*1 + ['MO']*1)
-# Windl = np.array(['TH']*2)
-# Interl = np.array(['IN1']*1 + ['IN2']*1 + ['IN3']*1 + ['IN4']*1) if ((node=='Super') & import_flag) else np.array([]) # Add external interconnections if ASEAN Power Grid scenario
-
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
 pv_ub_np = np.array([250.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
@@ -34,22 +28,14 @@ constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None,
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
     # expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
-# elif scenario == 'construction':
-#     hydrol = np.array(['CH']*3+['MO']*3+['TH']*3+['TS']*1+['ZH']*3)
-#     expl = np.array(['IN1']*3+['IN4']*3+['IN1']*3+['IN2']*1+['IN3']*3)
-# elif scenario == 'construction25':
-#     hydrol = np.array(['CH']*3+['MO']*2+['TH']*2+['TS']*1+['ZH']*3)
-#     expl = np.array(['IN1']*3+['IN4']*2+['IN1']*2+['IN2']*1+['IN3']*3)
-# elif scenario == 'all':
-#     hydrol = np.array(['CH']*6+['MO']*5+['TH']*3+['TS']*2+['ZH']*4+['PE']*1)
-#     expl = np.array(['IN1']*6+['IN4']*5+['IN1']*3+['IN2']*2+['IN3']*4+['IN4']*1)
+
 
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
-#indiaExportProfiles = hydroProfiles[:,1] # Tala power station is full export to India
+
 #peaking_hours = 4
-# Calculate baseload and daily pondage
+# Calculate baseload and daily peaking
 baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
 daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
 

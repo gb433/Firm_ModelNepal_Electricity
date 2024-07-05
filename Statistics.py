@@ -15,7 +15,7 @@ def Debug(solution):
     """Debugging"""
     Load, PV, India = (solution.MLoad.sum(axis=1), solution.GPV.sum(axis=1), solution.MIndia.sum(axis=1))
     Baseload = solution.MBaseload.sum(axis=1)
-    #Peaking = solution.MPeaking.sum(axis=1)
+    Peaking = solution.MPeaking.sum(axis=1)
 
     DischargePH, ChargePH, StoragePH = (solution.DischargePH, solution.ChargePH, solution.StoragePH)
     Deficit_energy, Deficit_power, Deficit, Spillage = (solution.Deficit_energy, solution.Deficit_power, solution.Deficit, solution.Spillage)
@@ -26,7 +26,7 @@ def Debug(solution):
     for i in range(intervals):
         # Energy supply-demand balance
         assert abs(Load[i] + ChargePH[i] + Spillage[i] \
-                   - PV[i] - India[i] - Baseload[i] - DischargePH[i] - Deficit[i]) <= 1
+                   - PV[i] - India[i] - Baseload[i] - Peaking[i] - DischargePH[i] - Deficit[i]) <= 1
 
         # Discharge, Charge and Storage
         if i==0:
@@ -36,7 +36,7 @@ def Debug(solution):
 
         # Capacity: PV, wind, Discharge, Charge and Storage
         try:
-            # assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
+            assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
             # assert np.amax(Wind) - sum(solution.CWind) * pow(10, 3) <= 0.1, print("Wind", np.amax(Wind) - sum(solution.CWind) * pow(10, 3))
             assert np.amax(India) - sum(solution.CInter) * pow(10,3) <= 0.1
 
@@ -55,8 +55,7 @@ def LPGM(solution):
 
     Debug(solution)
 
-    C = np.stack([(solution.MLoad).sum(axis=1),
-                  solution.MBaseload.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
+    C = np.stack([(solution.MLoad).sum(axis=1), solution.MBaseload.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
                   solution.DischargePH, solution.Deficit, -1 * (solution.Spillage), -1 * solution.ChargePH,
                   solution.StoragePH,
                   solution.SPKP, solution.KPLP, solution.LPGP, solution.GPBP, solution.BPMP, solution.EPMP, solution.TISP, solution.GILP, solution.MIMP, solution.KIEP])
@@ -68,24 +67,24 @@ def LPGM(solution):
     C = np.insert(C.astype('str'), 0, datentime, axis=1)
 
     header = 'Date & time,Operational demand,' \
-             'RoR Hydropower (MW),Peaking Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW),India Exports (MW),PHES-Charge (MW),' \
-             'PHES-Storage (MWh),Peaking-Storage (MWh),' \
+             'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), Energy Spillage (MW), PHES-Charge (MW),' \
+             'PHES-Storage (MWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP'
 
     np.savetxt('Results/LPGM_{}_{}_{}_{}_{}_Network.csv'.format(node,scenario,percapita,import_flag, ac_flag), C, fmt='%s', delimiter=',', header=header, comments='')
 
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
-                 'RoR Hydropower (MW),Peaking Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW),India Exports (MW),'\
-                 'Transmission,PHES-Charge (MW),Peaking-Storage (MWh),' \
-                 'PHES-Storage'
+         'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW),Energy Spillage (MW),' \
+         'Transmission,PHES-Charge (MW),' \
+         'PHES-Storage'
 
         Topology = solution.Topology[np.where(np.in1d(Nodel, coverage) == True)[0]]
 
         for j in range(nodes):
 
             C = np.stack([(solution.MLoad)[:, j],
-                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
+                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j],
                           solution.MDischargePH[:, j], solution.MDeficit[:, j], -1 * (solution.MSpillage[:, j]), Topology[j], 
                           -1 * solution.MChargePH[:, j],
                           solution.MStoragePH[:, j]])
@@ -111,7 +110,7 @@ def GGTA(solution):
 
     # Import generation energy [GWh] from the least-cost solution
    # Ghydro_CH2 = indiaExportProfiles.sum() 
-    GPV, GHydro, GIndia = map(lambda x: x * pow(10, -6) * resolution / years, (solution.GPV.sum(), solution.MBaseload.sum()+ solution.MIndia.sum())) # TWh p.a.
+    GPV, GHydro, GIndia = map(lambda x: x * pow(10, -6) * resolution / years, (solution.GPV.sum(), solution.MBaseload.sum() + solution.MPeaking.sum(), solution.MIndia.sum())) # TWh p.a.
     DischargePH = solution.DischargePH.sum()
     CFPV = GPV / CPV / 8.76 if CPV != 0 else 0
     # CFWind =  CWind / 8.76
@@ -179,20 +178,20 @@ def GGTA(solution):
     print('\u2022 LCOB-Transmission:', LCOBT)
     print('\u2022 LCOB-Spillage & loss:', LCOBL)
 
-    size = 19 + len(list(solution.CDC))
+    size = 20 + len(list(solution.CDC))
     D = np.zeros((3, size))
     header = 'Boundary,Annual demand (TWh),Annual Energy Losses (TWh),' \
              'PV Capacity (GW),PV Avg Annual Gen (GWh),Hydro Capacity (GW),Hydro Avg Annual Gen (GWh),Inter Capacity (GW),India Avg Annual Imports (GWh)' \
              'PHES-PowerCap (GW),PHES-EnergyCap (GWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP,' \
-             'LCOE,LCOG,LCOB,LCOG_PV,LCOG_Hydro,LCOG_IndiaImports,LCOBS_PHES,LCOBT'
+             'LCOE,LCOG,LCOB,LCOG_PV,LCOG_Hydro,LCOG_IndiaImports,LCOBS_PHES,LCOBT,LCOBL'
     
     ### ALL IN COSTS
     #Domestic and exports
     D[0, :] = [0,Energy * pow(10, 3), Loss * pow(10, 3), CPV, GPV, CapHydro, GHydro, CInter, GIndia] \
               + [CPHP, CPHS] \
               + list(solution.CDC) \
-              + [LCOE, LCOG, LCOB, LCOGP, LCOGH, LCOGH, LCOGI, LCOBS_P, LCOBT, LCOBL] 
+              + [LCOE, LCOG, LCOB, LCOGP, LCOGH, LCOGI, LCOBS_P, LCOBT, LCOBL] 
     
     ### DOMESTIC COSTS ONLY
     #GBaseloadExports = solution.MBaseload_exp.sum() * pow(10,-6) * resolution / years
@@ -237,18 +236,17 @@ def Information(x, flexible):
     print("Statistics start at", start)
 
     S = Solution(x)
-    Deficit_energy, Deficit_power, Deficit, DischargePH, Spillage = Reliability(S, baseload=baseload, india_imports=flexible)
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=flexible, daily_peaking=daily_peaking)
 
     try:
         assert Deficit.sum() * resolution < 0.1, 'Energy generation and demand are not balanced.'
     except AssertionError:
         pass
     
-    S.TDC = Transmission(S, output=True)
+    S.TDC = Transmission(S,domestic_only=True, output=True)
     S.CDC = np.amax(abs(S.TDC), axis=0) * pow(10, -3) # CDC(k), MW to GW
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
     S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TDC[:, k], range(S.TDC.shape[1]))
-
     if 'Super' not in node:
         S.MPV = S.GPV
         #S.MWind = np.zeros((intervals, 1))#S.GWind if S.GWind.shape[1]>0 else np.zeros((intervals, 1))
@@ -263,7 +261,7 @@ def Information(x, flexible):
 
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
     # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
-    S.Topology = np.array(-1 * [S.TISP + S.SPKP,               # SP
+    S.Topology = np.array([-1 * (S.TISP + S.SPKP),             # SP
                  (S.SPKP + S.KPLP),                            # KP
                  -1 * (S.GILP + S.KPLP + S.LPGP),              # LP
                  (S.LPGP + S.GPBP),                            # GP
@@ -273,8 +271,7 @@ def Information(x, flexible):
                  S.TISP,                                       # TI
                  -1 * S.GILP,                                  # GI
                  -1 * S.MIMP,                                  # MI
-                 S.KIEP])                                      # KI
-   
+                 S.KIEP])                                      # KI
     LPGM(S)
     GGTA(S)
 

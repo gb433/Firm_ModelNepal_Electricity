@@ -31,12 +31,13 @@ def create_profiles(lats, longs, years, output_file):
     final_df.to_csv(output_file, index=False)  
 
 if __name__ == '__main__':
-    input_dir = '/path/to/SAM Outputs/dir'
-    output_dir = '/path/to/output/dir'
+    input_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/SAM_Output'
+    output_dir = '/Users/geetabhatta/Documents/Firm_ModelNepal_Electricity/Solar_SAM/PV_Output'
 
-    lats = [str(x) for x in [2.123,5.681,6.319,5.900,2.502,3.225,4.563,3.985,5.284,5.425,2.369,1.671,3.855,3.108,5.081]]
-    longs = [str(x) for x in [103.262,100.414,100.283,102.208,102.134,102.465,100.955,101.090,118.284,115.598,111.857,111.257,113.883,101.618,103.104]]
-    years = list(range(2007,2023))
+    lats = [str(x) for x in [26.7908, 26.9784, 27.087, 27.3141, 27.3141, 27.7179, 26.9138, 26.9435, 26.5663, 27.5409, 27.9373, 27.7551, 27.8507, 28.3565, 27.5328, 28.4229, 28.4782, 28.855, 28.9754]]
+    longs = [str(x) for x in [87.6376, 87.0945, 86.7587, 87.6968, 87.1537, 87.3067, 85.7204, 85.214, 86.6735, 85.671, 85.1109, 86.1999, 84.1951, 84.628, 83.1894, 82.7561, 82.1175, 82.2588, 80.6335]]
+    years = list(range(2013, 2023))  # Adjusted to include up to 2022
+
 
     output_file = output_dir + '/pv.csv'
 

@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def Reliability(solution, baseload, india_imports, daily_peaking, peaking_hours, start=None, end=None):
+def Reliability(solution, baseload, india_imports, daily_peaking, start=None, end=None):
     """Deficit = Simulation.Reliability(S, hydro=...)"""
 
     ###### CALCULATE NETLOAD FOR EACH INTERVAL ######
@@ -78,7 +78,7 @@ def Reliability(solution, baseload, india_imports, daily_peaking, peaking_hours,
     assert np.amin(Spillage) >= 0, 'Spillage below zero'
 
     ###### UPDATE SOLUTION OBJECT ######
-    solution.DischargePH, solution.ChargePH, solution.StoragePH = (DischargePH, ChargePH, StoragePH)
+    solution.DischargePH, solution.ChargePH, solution.StoragePH, solution.DischargePeaking, solution.StoragePeaking = (DischargePH, ChargePH, StoragePH, DischargePeaking, StoragePeaking)
     solution.Deficit_energy, solution.Deficit_power, solution.Deficit, solution.Spillage = (Deficit_energy, Deficit_power, Deficit, Spillage)
 
     return Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage
