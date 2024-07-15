@@ -47,8 +47,8 @@ for i in range(0, MLoad.shape[0]):
 Hydromax = EHydro.sum() * pow(10,3) # GWh to MWh per year
 
 # Transmission constraints
-""" externalImports = 0.05 if node=='Super' else 0
-CDC7max, CDC8max, CDC9max, CDC10max = 4 * [externalImports * MLoad.sum() / MLoad.shape[0] / 1000] # 5%: External interconnections: THKD, INSE, PHSB, MW to GW """
+externalImports = 0.05 if node=='Super' else 0
+CDC7max, CDC8max, CDC9max, CDC10max = 4 * [externalImports * MLoad.sum() / MLoad.shape[0] / 1000] # 5%: External interconnections: TISP, GILP, MIMP, KIEP MW to GW """
 
 ###### TRANSMISSION LOSSES ######
 # HVDC backbone scenario
@@ -57,7 +57,7 @@ if ac_flag == 'HVDC':
     dc_flags = np.array([True, True, True, True, True, True, True, True, True, True, True])
 else:
     # HVAC backbone scenario
-    dc_flags = np.array([False, False, False, False, False, False, True, True, True, True])
+    dc_flags = np.array([False, False, False, False, False, False, False, False, False, False])
 
 TLoss = []
 # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
@@ -66,11 +66,6 @@ for i in range(0, len(dc_flags)):
     TLoss.append(TDistances[i] * 0.03) if dc_flags[i] else TLoss.append(TDistances[i] * 0.07)
 TLoss = np.array(TLoss) * pow(10, -3)
 
-# dc_flags = np.array([True,True,True,True,True,True,True,True,True,True])
-    
-""" # HVAC backbone scenario
-dc_flags = np.array([False,False,False,False,False,False,False,False,False,False]) """
-    
 
 
 ###### STORAGE SYSTEM CONSTANTS ######
