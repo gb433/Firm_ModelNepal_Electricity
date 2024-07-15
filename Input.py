@@ -7,8 +7,8 @@ import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
-PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
-pv_ub_np = np.array([250.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
+PVl = np.array(['SP'] * 1 + ['KP'] * 2 + ['LP'] * 2 + ['GP'] * 2 + ['BP'] * 3+ ['MP'] * 3 + ['EP'] * 6)
+pv_ub_np = np.array([250.] + [20., 10] + [20.,16.] + [10., 12.] + [8.,5.,6.] + [10.,8.,12.] + [7., 10.,13.,8.,6.,4.])
 phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [1268.] + [942.] + [0.] + [0.] + [0.] + [0.])
 
 # Add external interconnections 
@@ -22,8 +22,6 @@ TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(
 
 assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
-# if scenario == 'existing':
-#     hydrol = np.array(['SP']*3+['KP']*3+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
 
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
