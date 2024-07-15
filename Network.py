@@ -46,10 +46,6 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         ifactor = np.tile(CIndia, (intervals, 1)) / CIndia.sum()
     MIndia = np.tile(india_imports, (nodes, 1)).transpose() * ifactor
 
-   # efactor = np.array([0,0,0,0,0,0,0,1,0,0,0])
-    #ch2factor = np.array([0,1,0,0,0,0,0,0,0,0,0])
-   # MExport = np.tile(solution.indiaExportProfiles, (nodes, 1)).transpose() * efactor
-   # MHydro_CH2 = np.tile(solution.indiaExportProfiles, (nodes, 1)).transpose() * ch2factor
 
     """  CHydro_nodes = np.zeros(nodes)
     for j in range(0,len(Nodel)):
@@ -125,6 +121,6 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking = (MPV, MIndia, MBaseload, MPeaking)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
-        #solution.MBaseload_exp, solution.MPV_exp, solution.MPeaking_exp = (MBaseload_exp, MPV_exp, MPeaking_exp)
+     
 
     return TDC

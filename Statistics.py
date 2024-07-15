@@ -193,12 +193,6 @@ def GGTA(solution):
               + list(solution.CDC) \
               + [LCOE, LCOG, LCOB, LCOGP, LCOGH, LCOGI, LCOBS_P, LCOBT, LCOBL] 
     
-    ### DOMESTIC COSTS ONLY
-    #GBaseloadExports = solution.MBaseload_exp.sum() * pow(10,-6) * resolution / years
-    #GPeakingExports = solution.MPeaking_exp.sum() * pow(10,-6) * resolution / years
-    #GSolarExports = solution.MPV_exp.sum() * pow(10,-6) * resolution / years
-    #GWindExports = solution.MWind_exp.sum() * pow(10,-6) * resolution / years
-    #Ghydro_CH2 *= pow(10,-6) * resolution / years
 
     CostHydro = factor['Hydro'] * (GHydro)
 

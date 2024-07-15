@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def Reliability(solution, baseload, india_imports, daily_peaking, start=None, end=None):
+def Reliability(solution, baseload, india_imports, daily_peaking, peaking_hours=0, start=None, end=None):
     """Deficit = Simulation.Reliability(S, hydro=...)"""
 
     ###### CALCULATE NETLOAD FOR EACH INTERVAL ######
