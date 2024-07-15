@@ -45,45 +45,34 @@ def F(x):
 
     CIndia = np.nan_to_num(np.array(S.CInter))
 
-    if import_flag == True:
-        # Simulation with only baseload
-        Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, DischargePeaking1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals), daily_peaking=daily_peaking)
-        Max_deficit1 = np.reshape(Deficit1, (-1, 8760)).sum(axis=-1) # MWh per year
-        PIndia = Deficit1.max() * pow(10, -3) # GW
+    
+    # Simulation with only baseload
+    Deficit_energy1, Deficit_power1, Deficit1, DischargePH1, DischargePeaking1, Spillage1 = Reliability(S, baseload=baseload, india_imports=np.zeros(intervals), daily_peaking=daily_peaking)
+    Max_deficit1 = np.reshape(Deficit1, (-1, 8760)).sum(axis=-1) # MWh per year
+    PIndia = Deficit1.max() * pow(10, -3) # GW
 
-        GIndia = resolution * (Max_deficit1).max() / efficiencyPH
+    GIndia = resolution * (Max_deficit1).max() / efficiencyPH
 
-        PenPower = abs(PIndia - CIndia.sum()) * pow(10,3)
-        PenEnergy = 0
+    PenPower = abs(PIndia - CIndia.sum()) * pow(10,3)
+    PenEnergy = 0
         
-        # Simulation with baseload, all existing capacity, and all hydrogen
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking)
+    # Simulation with baseload, all existing capacity
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking)
 
-        # Deficit penalty function
-        PenDeficit = max(0, Deficit.sum() * resolution - S.allowance)
+    # Deficit penalty function
+    PenDeficit = max(0, Deficit.sum() * resolution - S.allowance)
 
-        # India import profile
-        india_imports = np.clip(Deficit1, 0, CIndia.sum() * pow(10,3)) # MW
+    # India import profile
+    india_imports = np.clip(Deficit1, 0, CIndia.sum() * pow(10,3)) # MW
 
-        # Simulation using the existing capacity generation profiles - required for storage average annual discharge
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking)
+    # Simulation using the existing capacity generation profiles - required for storage average annual discharge
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking)
 
-        # Discharged energy from storage systems
-        GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
-    else:
-        PenPower = 0
-        PenEnergy = 0
+    # Discharged energy from storage systems
+    GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
+    
 
-        india_imports = np.zeros(intervals)
-
-        # Simulation using the existing capacity generation profiles - required for storage average annual discharge
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking)
-
-        # Deficit penalty function
-        PenDeficit = max(0, Deficit.sum() * resolution - S.allowance)
-
-        # Discharged energy from storage systems
-        GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
+    india_imports = np.zeros(intervals)
 
     # Transmission capacity calculations
     # TDC = Transmission(S, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss))) # TDC: TDC(t, k), MW
