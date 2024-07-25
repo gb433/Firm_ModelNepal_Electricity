@@ -6,10 +6,12 @@
 import numpy as np
 from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
+###### NODAL LISTS ######
+
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
-PVl = np.array(['SP'] * 1 + ['KP'] * 2 + ['LP'] * 2 + ['GP'] * 2 + ['BP'] * 3+ ['MP'] * 3 + ['EP'] * 6)
-pv_ub_np = np.array([250.] + [20., 10] + [20.,16.] + [10., 12.] + [8.,5.,6.] + [10.,8.,12.] + [7., 10.,13.,8.,6.,4.])
-phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [1268.] + [942.] + [0.] + [0.] + [0.] + [0.])
+PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
+pv_ub_np = np.array([25.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
+phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
 
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
@@ -22,6 +24,8 @@ TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(
 
 assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
+# if scenario == 'existing':
+#     hydrol = np.array(['SP']*3+['KP']*3+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
 
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
@@ -31,15 +35,15 @@ if scenario == 'existing':
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
-
-#peaking_hours = 4
-# Calculate baseload and daily peaking
+#indiaExportProfiles = hydroProfiles[:,1] # Tala power station is full export to India
+peaking_hours = 4
+# Calculate baseload and daily pondage
 baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
 daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
 
 for i in range(0, MLoad.shape[0]):
     for j in range(0, len(CHydro_RoR)):
-        baseload[i,j] = hydroProfiles[i,j]
+        baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
         daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
 
 ###### CONSTRAINTS ######
@@ -47,8 +51,8 @@ for i in range(0, MLoad.shape[0]):
 Hydromax = EHydro.sum() * pow(10,3) # GWh to MWh per year
 
 # Transmission constraints
-externalImports = 0.05 if node=='Super' else 0
-CDC7max, CDC8max, CDC9max, CDC10max = 4 * [externalImports * MLoad.sum() / MLoad.shape[0] / 1000] # 5%: External interconnections: TISP, GILP, MIMP, KIEP MW to GW """
+""" externalImports = 0.05 if node=='Super' else 0
+CDC7max, CDC8max, CDC9max, CDC10max = 4 * [externalImports * MLoad.sum() / MLoad.shape[0] / 1000] # 5%: External interconnections: THKD, INSE, PHSB, MW to GW """
 
 ###### TRANSMISSION LOSSES ######
 # HVDC backbone scenario
@@ -57,7 +61,7 @@ if ac_flag == 'HVDC':
     dc_flags = np.array([True, True, True, True, True, True, True, True, True, True, True])
 else:
     # HVAC backbone scenario
-    dc_flags = np.array([False, False, False, False, False, False, False, False, False, False])
+    dc_flags = np.array([False, False, False, False, False, False, True, True, True, True])
 
 TLoss = []
 # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
@@ -66,6 +70,11 @@ for i in range(0, len(dc_flags)):
     TLoss.append(TDistances[i] * 0.03) if dc_flags[i] else TLoss.append(TDistances[i] * 0.07)
 TLoss = np.array(TLoss) * pow(10, -3)
 
+# dc_flags = np.array([True,True,True,True,True,True,True,True,True,True])
+    
+""" # HVAC backbone scenario
+dc_flags = np.array([False,False,False,False,False,False,False,False,False,False]) """
+    
 
 
 ###### STORAGE SYSTEM CONSTANTS ######

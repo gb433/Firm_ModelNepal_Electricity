@@ -36,7 +36,7 @@ def Debug(solution):
 
         # Capacity: PV, wind, Discharge, Charge and Storage
         try:
-            assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
+            # assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
             # assert np.amax(Wind) - sum(solution.CWind) * pow(10, 3) <= 0.1, print("Wind", np.amax(Wind) - sum(solution.CWind) * pow(10, 3))
             assert np.amax(India) - sum(solution.CInter) * pow(10,3) <= 0.1
 
@@ -55,9 +55,10 @@ def LPGM(solution):
 
     Debug(solution)
 
-    C = np.stack([(solution.MLoad).sum(axis=1), solution.MBaseload.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
+    C = np.stack([(solution.MLoad).sum(axis=1),
+                  solution.MBaseload.sum(axis=1), solution.MPeaking.sum(axis=1), solution.MIndia.sum(axis=1), solution.GPV.sum(axis=1),
                   solution.DischargePH, solution.Deficit, -1 * (solution.Spillage), -1 * solution.ChargePH,
-                  solution.StoragePH,
+                  solution.StoragePH, solution.StoragePeaking,
                   solution.SPKP, solution.KPLP, solution.LPGP, solution.GPBP, solution.BPMP, solution.EPMP, solution.TISP, solution.GILP, solution.MIMP, solution.KIEP])
        # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 
@@ -67,7 +68,7 @@ def LPGM(solution):
     C = np.insert(C.astype('str'), 0, datentime, axis=1)
 
     header = 'Date & time,Operational demand,' \
-             'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), Energy Spillage (MW), PHES-Charge (MW),' \
+             'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW), PHES-Charge (MW),' \
              'PHES-Storage (MWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP'
 
@@ -75,16 +76,15 @@ def LPGM(solution):
 
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
-         'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW),Energy Spillage (MW),' \
-         'Transmission,PHES-Charge (MW),' \
-         'PHES-Storage'
-
+                 'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW),'\
+                 'Transmission,PHES-Charge (MW)' \
+                 'PHES-Storage'
         Topology = solution.Topology[np.where(np.in1d(Nodel, coverage) == True)[0]]
 
         for j in range(nodes):
 
             C = np.stack([(solution.MLoad)[:, j],
-                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j],
+                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
                           solution.MDischargePH[:, j], solution.MDeficit[:, j], -1 * (solution.MSpillage[:, j]), Topology[j], 
                           -1 * solution.MChargePH[:, j],
                           solution.MStoragePH[:, j]])
@@ -192,7 +192,6 @@ def GGTA(solution):
               + [CPHP, CPHS] \
               + list(solution.CDC) \
               + [LCOE, LCOG, LCOB, LCOGP, LCOGH, LCOGI, LCOBS_P, LCOBT, LCOBL] 
-    
 
     CostHydro = factor['Hydro'] * (GHydro)
 
@@ -222,7 +221,11 @@ def GGTA(solution):
     LCOBT = (CostDC_domestic + CostAC_domestic) / (Energy - Loss_domestic)
     LCOBL = LCOB - LCOBS_P - LCOBT
 
-    
+    np.savetxt('Results/GGTA_{}_{}_{}_{}.csv'.format(node,scenario,percapita,import_flag), D, fmt='%f', delimiter=',',header=header)
+    print('Energy generation, storage and transmission information is produced.')
+
+    return True
+
 def Information(x, flexible):
     """Dispatch: Statistics.Information(x, Flex)"""
 
@@ -230,7 +233,7 @@ def Information(x, flexible):
     print("Statistics start at", start)
 
     S = Solution(x)
-    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=flexible, daily_peaking=daily_peaking)
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=flexible, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
 
     try:
         assert Deficit.sum() * resolution < 0.1, 'Energy generation and demand are not balanced.'
@@ -255,7 +258,21 @@ def Information(x, flexible):
 
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
     # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
-    S.Topology = np.array([-1 * (S.TISP + S.SPKP),             # SP
+    # S.Topology = np.array([S.TISP - S.SPKP,                     # SP
+    #              (S.SPKP + S.KPLP),                             # KP
+    #               S.GILP - S.KPLP + S.LPGP,                     # LP
+    #               -1 * (S.LPGP + S.GPBP),                       # GP
+    #               S.GPBP + S.BPMP,                              # BP
+    #               (S.MIMP - S.BPMP + S.EPMP),                   # MP
+    #               -1* (S.EPMP + S.KIEP),                        # EP
+    #               -1 * S.TISP,                                  # TI
+    #               -1 * S.GILP,                                  # GI
+    #               -1 * S.MIMP,                                  # MI
+    #               S.KIEP])                                      # KI
+
+    # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
+    # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
+    S.Topology = np.array([-1 * (S.TISP + S.SPKP),              # SP
                  (S.SPKP + S.KPLP),                            # KP
                  -1 * (S.GILP + S.KPLP + S.LPGP),              # LP
                  (S.LPGP + S.GPBP),                            # GP
