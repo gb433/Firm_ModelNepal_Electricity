@@ -87,7 +87,7 @@ if __name__ == '__main__':
     from Input import *
     from Network import Transmission 
 
-    suffix = "_Super_existing_20_True.csv"
+    suffix = "_Super_existing_3_True.csv"
     Optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     
     # Initialise the optimisation
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     PenPower = abs(PIndia - CIndia.sum()) * pow(10,3)
     PenEnergy = 0
     
-    # Simulation with baseload, all existing capacity, and all hydrogen
+    # Simulation with baseload, all existing capacity
     Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking)
 
     # Deficit penalty function

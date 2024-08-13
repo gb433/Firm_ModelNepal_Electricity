@@ -50,7 +50,7 @@ def F(x):
         PenPower = abs(PIndia - CIndia.sum()) * pow(10,3)
         PenEnergy = 0
         
-        # Simulation with baseload, all existing capacity, and all hydrogen
+        # Simulation with baseload, all existing capacity
         Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=np.ones(intervals) * CIndia.sum() * pow(10,3), daily_peaking=daily_peaking, peaking_hours=peaking_hours)
 
         # Deficit penalty function
@@ -80,7 +80,6 @@ def F(x):
         GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
 
     # Transmission capacity calculations
-    # TDC = Transmission(S, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss))) # TDC: TDC(t, k), MW
     TDC = Transmission(S, domestic_only=True, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss)))
     CDC = np.amax(abs(TDC), axis=0) * pow(10, -3) # CDC(k), MW to GW
 

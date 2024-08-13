@@ -36,8 +36,6 @@ def Debug(solution):
 
         # Capacity: PV, wind, Discharge, Charge and Storage
         try:
-            # assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
-            # assert np.amax(Wind) - sum(solution.CWind) * pow(10, 3) <= 0.1, print("Wind", np.amax(Wind) - sum(solution.CWind) * pow(10, 3))
             assert np.amax(India) - sum(solution.CInter) * pow(10,3) <= 0.1
 
             assert np.amax(DischargePH) - sum(solution.CPHP) * pow(10, 3) <= 0.1, print("DischargePH",np.amax(DischargePH) - sum(solution.CPHP) * pow(10, 3))
@@ -77,7 +75,7 @@ def LPGM(solution):
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
                  'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW),'\
-                 'Transmission,PHES-Charge (MW)' \
+                 'Transmission,PHES-Charge (MW),' \
                  'PHES-Storage'
         Topology = solution.Topology[np.where(np.in1d(Nodel, coverage) == True)[0]]
 
@@ -109,11 +107,9 @@ def GGTA(solution):
     CapHydro = CHydro_max.sum() # GW
 
     # Import generation energy [GWh] from the least-cost solution
-   # Ghydro_CH2 = indiaExportProfiles.sum() 
     GPV, GHydro, GIndia = map(lambda x: x * pow(10, -6) * resolution / years, (solution.GPV.sum(), solution.MBaseload.sum() + solution.MPeaking.sum(), solution.MIndia.sum())) # TWh p.a.
     DischargePH = solution.DischargePH.sum()
     CFPV = GPV / CPV / 8.76 if CPV != 0 else 0
-    # CFWind =  CWind / 8.76
     
     # Calculate the annual costs for each technology
     CostPV = factor['PV'] * CPV # A$b p.a.
@@ -145,9 +141,7 @@ def GGTA(solution):
     # Calculate the levelised cost of elcetricity at a network level
     LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostDC + CostAC) / (Energy - Loss)
     LCOEPV = CostPV / (Energy - Loss)
-    # LCOEWind = CostWind / (Exports*pow(10,-3) + Energy - Loss)
-    #LCOEWind = (Exports*pow(10,-3) + Energy - Loss)
-    #LCOEIndia = CostIndia / (Exports*pow(10,-3)  + Energy - Loss)
+    LCOEIndia = CostIndia / (Energy - Loss)
     LCOEHydro = CostHydro / (Energy - Loss)
     LCOEPH = CostPH / (Energy - Loss)
     LCOEDC = CostDC / (Energy - Loss)
@@ -156,7 +150,6 @@ def GGTA(solution):
     # Calculate the levelised cost of generation
     LCOG = (CostPV + CostHydro + CostIndia) * pow(10, 3) / (GPV + GHydro + GIndia)
     LCOGP = CostPV * pow(10, 3) / GPV if GPV!=0 else 0
-    # LCOGW = CostWind * pow(10, 3) / GWind if GWind!=0 else 0
     LCOGH = CostHydro * pow(10, 3) / (GHydro) if (GHydro)!=0 else 0
     LCOGI = CostIndia * pow(10, 3) / GIndia if GIndia != 0 else 0
 
@@ -246,7 +239,6 @@ def Information(x, flexible):
     S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TDC[:, k], range(S.TDC.shape[1]))
     if 'Super' not in node:
         S.MPV = S.GPV
-        #S.MWind = np.zeros((intervals, 1))#S.GWind if S.GWind.shape[1]>0 else np.zeros((intervals, 1))
         S.MIndia = S.GIndia
         S.MDischargePH = np.tile(S.DischargePH, (nodes, 1)).transpose()
         S.MDeficit = np.tile(S.Deficit, (nodes, 1)).transpose()
@@ -292,7 +284,7 @@ def Information(x, flexible):
     return True
 
 if __name__ == '__main__':
-    suffix="_Super_existing_6_True.csv"
+    suffix="_Super_existing_3_True.csv"
     Optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     flexible = np.genfromtxt('Results/Dispatch_IndiaImports{}'.format(suffix), delimiter=',', skip_header=1)
     Information(Optimisation_x, flexible)
