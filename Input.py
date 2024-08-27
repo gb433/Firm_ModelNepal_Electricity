@@ -9,9 +9,10 @@ from Optimisation import scenario, node, percapita, import_flag, ac_flag
 ###### NODAL LISTS ######
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
-PVl = np.array(['SP'] * 1 + ['KP'] * 1 + ['LP'] * 1 + ['GP'] * 1 + ['BP'] * 1 + ['MP'] * 1 + ['EP'] * 1)
+PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 2 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
 pv_ub_np = np.array([25.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
 phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
+
 
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
