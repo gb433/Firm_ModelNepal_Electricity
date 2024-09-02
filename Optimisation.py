@@ -117,7 +117,7 @@ if __name__=='__main__':
 
 
 
-    lb = pv_lb + [0.] * pzones + [0.] * nodes + [0.] + [0.] * inters
+    lb = pv_lb  + [0.] * nodes + [0.] + [0.] * inters
     ub = pv_ub + phes_ub + phes_s_ub + inters_ub
 
     result = differential_evolution(func=F, bounds=list(zip(lb, ub)), tol=0, # init=start,

@@ -10,7 +10,7 @@ from Optimisation import scenario, node, percapita, import_flag, ac_flag
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 2 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
-pv_ub_np = np.array([25.] + [30.] + [46.] + [15.] + [19.] + [35.] + [39.])
+pv_ub_np = np.array([22., 32., 15.] + [12., 18., 43.] + [22., 24.] + [25., 22.] + [18., 34., 14.] + [12., 19., 10.] + [17., 18., 14., 18., 10., 12.])
 phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
 
 
@@ -36,8 +36,8 @@ hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', sk
 
 peaking_hours = 4
 # Calculate baseload and daily peaking hydropower
-baseload = np.ones((MLoad.shape[0], len(CHydro_RoR)))
-daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_RoR)))
+baseload = np.ones((MLoad.shape[0], len(CHydro_max)))
+daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_max)))
 
 for i in range(0, MLoad.shape[0]):
     for j in range(0, len(CHydro_RoR)):
@@ -97,7 +97,12 @@ else:
     else:
         print("Undefined network structure. Check value of -n command line argument.")
         exit()
+    
+    pv_ub_np = pv_ub_np[np.where(np.in1d(PVl, coverage)==True)[0]]
+    phes_ub_np = phes_ub_np[np.where(np.in1d(Nodel, coverage)==True)[0]]
 
+    Nodel, PVl, Interl = [x[np.where(np.in1d(x, coverage)==True)[0]] for x in (Nodel, PVl, Interl)]
+    
 if ac_flag == 'HVAC':
     factor = np.genfromtxt('Data/factor_hvac.csv', delimiter=',', usecols=1)
 
@@ -111,7 +116,8 @@ iidx = phidx + 1 + inters # Index of external interconnections, noting pumped hy
 ###### NETWORK CONSTRAINTS ######
 energy = (MLoad).sum() * pow(10, -9) * resolution / years # PWh p.a.
 contingency_ph = list(0.25 * (MLoad).max(axis=0) * pow(10, -3))[:(nodes)] # MW to GW
-
+print("length of contingency_ph:", len(contingency_ph))
+   
 #manage = 0 # weeks
 allowance = min(0.00002*np.reshape(MLoad.sum(axis=1), (-1, 8760)).sum(axis=-1)) # Allowable annual deficit of 0.002%, MWh
 

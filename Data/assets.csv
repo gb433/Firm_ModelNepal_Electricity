@@ -1,9 +1,9 @@
 ﻿Node,Code,Fraction,Hydro,Hydro RoR,Hydro Peaking 
-Sudurpaschim,SP,1,115,83,32
+Sudurpaschim,SP,1,115,115,0
 Karnali,KP,1,16,16,0
 Lumbini,LP,1,21,21,0
-Gandaki,GP,1,823,540,283
-Bagmati,BP,1,1174,588,586
+Gandaki,GP,1,823,823,0
+Bagmati,BP,1,1174,1174,0
 Madhesh,MP,1,0,0,0
 Eastern,EP,1,369,369,0
 TanakpurIndia,TI,0,0,0,0
