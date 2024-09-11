@@ -76,7 +76,7 @@ def Analysis(optimisation_x,suffix):
     india_imports = np.zeros(intervals)
     Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=india_imports, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
     imp = fill_deficit(Deficit,india_imports,sum(S.CInter)*1e3,Indiamax,True,0.8,168)
-    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePond, Spillage = Reliability(S, baseload=baseload, india_imports=imp, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
+    Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=imp, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
     print("India generation:", maxx(imp))
     print("Remaining deficit:", Deficit.sum()/1e6)
     step = 1

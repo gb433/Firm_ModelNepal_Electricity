@@ -35,6 +35,8 @@ EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
 
 peaking_hours = 4
+peaking_start = 18 #6 PM
+peaking_end = peaking_start + peaking_hours #6PM to 10PM
 # Calculate baseload and daily peaking hydropower
 baseload = np.ones((MLoad.shape[0], len(CHydro_max)))
 daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_max)))
@@ -42,8 +44,36 @@ daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_max)))
 for i in range(0, MLoad.shape[0]):
     for j in range(0, len(CHydro_RoR)):
         baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
-        daily_peaking[i, j] = sum(hydroProfiles[i:i+23, j] - baseload[i:i+23, j]) if i % 24 == 0 else daily_peaking[i-1, j]
+        
+    # Update daily peaking calculation
+        if i % 24 == 0:  # At the start of a new day
+            daily_peaking_sum = 0  # Reset daily peaking sum for the new day
 
+            # Loop through the next 24 hours to calculate daily peaking
+            for k in range(24):
+                hour_index = i + k
+
+                if hour_index < MLoad.shape[0]:  # Ensure index is within bounds
+                    if peaking_start <= (k % 24) < peaking_end:  # Only consider peaking hours
+                        # Peaking generation is the difference between total generation and baseload, capped by hourly peaking capacity
+                        hourly_peaking = max(0, hydroProfiles[hour_index, j] - baseload[hour_index, j])
+                        capped_peaking = min(hourly_peaking, CHydro_Peaking[j] * pow(10, 3))  # MW limit
+
+                        daily_peaking[hour_index, j] = capped_peaking
+                        daily_peaking_sum += capped_peaking
+                    else:
+                        daily_peaking[hour_index, j] = 0  # No peaking generation outside the peaking window
+        else:
+            # Carry forward the previous day's peaking values
+            daily_peaking[i, j] = daily_peaking[i - 1, j] if i > 0 else 0
+
+# Print results for verification
+print("Baseload Generation:")
+print(baseload)
+
+print("Daily Peaking Generation:")
+print(daily_peaking)  
+         
 ###### CONSTRAINTS ######
 # Energy constraints
 Hydromax = EHydro.sum() * pow(10,3) # GWh to MWh per year

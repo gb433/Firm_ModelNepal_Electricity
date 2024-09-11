@@ -117,9 +117,9 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         #Check the final node
         BPMP1 = 1 *  MImport[:, np.where(Nodel=='MP')[0][0]] - MIMP - EPMP if 'MP' in coverage else np.zeros(intervals)
         # Debugging: Print BPMP and BPMP1
-        print(f"BPMP: {BPMP}")
-        print(f"BPMP1: {BPMP1}")
-        print(f"Max difference between BPMP and BPMP1: {abs(BPMP - BPMP1).max()}")
+        #print(f"BPMP: {BPMP}")
+        #print(f"BPMP1: {BPMP1}")
+       # print(f"Max difference between BPMP and BPMP1: {abs(BPMP - BPMP1).max()}")
 
         assert abs(BPMP - BPMP1).max() <= 0.1, print('BPMP Error', abs(BPMP - BPMP1).max())
         TDC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW

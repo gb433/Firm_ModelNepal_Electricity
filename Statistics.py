@@ -66,23 +66,23 @@ def LPGM(solution):
     C = np.insert(C.astype('str'), 0, datentime, axis=1)
 
     header = 'Date & time,Operational demand,' \
-             'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW), PHES-Charge (MW),' \
-             'PHES-Storage (MWh),' \
+             'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW), PHES-Charge (MW),' \
+             'PHES-Storage (MWh),Peaking-Storage (MWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP'
 
     np.savetxt('Results/LPGM_{}_{}_{}_{}_{}_Network.csv'.format(node,scenario,percapita,import_flag, ac_flag), C, fmt='%s', delimiter=',', header=header, comments='')
 
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
-                 'RoR Hydropower (MW),India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW),'\
+                 'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW),'\
                  'Transmission,PHES-Charge (MW),' \
-                 'PHES-Storage'
+                 'PHES-Storage,'
         Topology = solution.Topology[np.where(np.in1d(Nodel, coverage) == True)[0]]
 
         for j in range(nodes):
 
             C = np.stack([(solution.MLoad)[:, j],
-                          solution.MBaseload[:, j],solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
+                          solution.MBaseload[:, j],solution.MPeaking[:, j], solution.MIndia[:, j], solution.MPV[:, j], #solution.MWind[:, j],
                           solution.MDischargePH[:, j], solution.MDeficit[:, j], -1 * (solution.MSpillage[:, j]), Topology[j], 
                           -1 * solution.MChargePH[:, j],
                           solution.MStoragePH[:, j]])
@@ -174,7 +174,7 @@ def GGTA(solution):
     size = 20 + len(list(solution.CDC))
     D = np.zeros((3, size))
     header = 'Boundary,Annual demand (TWh),Annual Energy Losses (TWh),' \
-             'PV Capacity (GW),PV Avg Annual Gen (GWh),Hydro Capacity (GW),Hydro Avg Annual Gen (GWh),Inter Capacity (GW),India Avg Annual Imports (GWh)' \
+             'PV Capacity (GW),PV Avg Annual Gen (GWh),Hydro Capacity (GW),Hydro Avg Annual Gen (GWh),Inter Capacity (GW),India Avg Annual Imports (GWh),' \
              'PHES-PowerCap (GW),PHES-EnergyCap (GWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP,' \
              'LCOE,LCOG,LCOB,LCOG_PV,LCOG_Hydro,LCOG_IndiaImports,LCOBS_PHES,LCOBT,LCOBL'

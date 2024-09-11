@@ -14,7 +14,7 @@ parser.add_argument('-i', default=400, type=int, required=False, help='maxiter=4
 parser.add_argument('-p', default=2, type=int, required=False, help='popsize=2, 10')
 parser.add_argument('-m', default=0.5, type=float, required=False, help='mutation=0.5')
 parser.add_argument('-r', default=0.3, type=float, required=False, help='recombination=0.3')
-parser.add_argument('-e', default=20, type=int, required=False, help='per-capita electricity = 3, 6, 9 MWh/year')
+parser.add_argument('-e', default=2, type=int, required=False, help='per-capita electricity = 2, 5, 9 MWh/year')
 parser.add_argument('-n', default='Super', type=str, required=False, help='Super, SP, KP...')
 parser.add_argument('-s', default='existing', type=str, required=False, help='existing,underconstruction')
 parser.add_argument('-y', default='import', type=str, required=False, help='import, no_import')
