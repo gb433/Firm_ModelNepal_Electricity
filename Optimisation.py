@@ -18,13 +18,13 @@ parser.add_argument('-e', default=2, type=int, required=False, help='per-capita 
 parser.add_argument('-n', default='Super', type=str, required=False, help='Super, SP, KP...')
 parser.add_argument('-s', default='existing', type=str, required=False, help='existing,underconstruction')
 parser.add_argument('-y', default='import', type=str, required=False, help='import, no_import')
-parser.add_argument('-f', default='HVAC', type=str, required=False, help='ac_flag, no_import')
+#parser.add_argument('-f', default='HVAC', type=str, required=False, help='ac_flag, no_import')
 args = parser.parse_args()
 
 scenario = args.s
 node = args.n
 percapita = args.e
-ac_flag = args.f
+#ac_flag = args.f
 import_flag = (args.y == 'import')
 
 from Input import *

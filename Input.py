@@ -4,12 +4,12 @@
 # Correspondence: bin.lu@anu.edu.au
 
 import numpy as np
-from Optimisation import scenario, node, percapita, import_flag, ac_flag
+from Optimisation import scenario, node, percapita, import_flag
 
 ###### NODAL LISTS ######
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
-PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 2 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
+PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 3 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
 pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22.] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
 phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
 
@@ -22,17 +22,21 @@ resolution = 1
 MLoad = np.genfromtxt('Data/electricity{}.csv'.format(percapita), delimiter=',', skip_header=1, usecols=range(4, 4+len(Nodel))) # EOLoad(t, j), MW
 TSPV = np.genfromtxt('Data/pv.csv', delimiter=',', skip_header=1, usecols=range(4, 4+len(PVl))) # TSPV(t, i), MW
 
-assets = np.genfromtxt('Data/assets.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
-constraints = np.genfromtxt('Data/constraints.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
+assets = np.genfromtxt('Data/assets_{}.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
+constraints = np.genfromtxt('Data/constraints_{}.csv'.format(scenario), dtype=None, delimiter=',', encoding=None)[1:, 3:].astype(float)
 
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
     # expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
-
+elif scenario == 'construction':
+    hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
+elif scenario == 'all':
+    hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
+    
 
 CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in range(assets.shape[1])] # CHydro(j), MW to GW
 EHydro = constraints[:, 0] # GWh per year
-hydroProfiles = np.genfromtxt('Data/RoR.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
+hydroProfiles = np.genfromtxt('Data/RoR_{}.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
 
 peaking_hours = 4
 peaking_start = 18 #6 PM
@@ -83,33 +87,26 @@ Hydromax = EHydro.sum() * pow(10,3) # GWh to MWh per year
 CDC7max, CDC8max, CDC9max, CDC10max = 4 * [externalImports * MLoad.sum() / MLoad.shape[0] / 1000] # 5%: External interconnections: THKD, INSE, PHSB, MW to GW """
 
 ###### TRANSMISSION LOSSES ######
-# HVDC backbone scenario
-if ac_flag == 'HVDC':
-    # HVDC backbone scenario
-    dc_flags = np.array([True, True, True, True, True, True, True, True, True, True, True])
-else:
+# HVAC backbone scenario
+ac_flags = np.array([True, True, True, True, True, True, True, True, True, True])
+#else:
     # HVAC backbone scenario
-    dc_flags = np.array([False, False, False, False, False, False, True, True, True, True])
+#    dc_flags = np.array([False, False, False, False, False, False, True, True, True, True])
 
 TLoss = []
 # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 TDistances = [131, 178, 75, 149, 122, 197, 16, 40, 78, 26]
-for i in range(0, len(dc_flags)):
-    TLoss.append(TDistances[i] * 0.03) if dc_flags[i] else TLoss.append(TDistances[i] * 0.07)
-TLoss = np.array(TLoss) * pow(10, -3)
-
-# dc_flags = np.array([True,True,True,True,True,True,True,True,True,True])
+TDistances = np.array(TDistances)
+for i in range(0,len(ac_flags)):
+    TLoss.append(TDistances[i]*0.07) if ac_flags[i] else TLoss.append(TDistances[i]*0.03)
+TLoss = np.array(TLoss)* pow(10, -3)
+print(TLoss)
     
-""" # HVAC backbone scenario
-dc_flags = np.array([False,False,False,False,False,False,False,False,False,False]) """
-    
-
-
 ###### STORAGE SYSTEM CONSTANTS ######
 efficiencyPH = 0.8
 
 ###### COST FACTORS ######
-factor = np.genfromtxt('Data/factor.csv', delimiter=',', usecols=1)
+factor = np.genfromtxt('Data/factor_hvac.csv', delimiter=',', usecols=1)
 
 ###### SIMULATION PERIOD ######
 firstyear, finalyear, timestep = (2013, 2022, 1)
@@ -133,7 +130,6 @@ else:
 
     Nodel, PVl, Interl = [x[np.where(np.in1d(x, coverage)==True)[0]] for x in (Nodel, PVl, Interl)]
     
-if ac_flag == 'HVAC':
     factor = np.genfromtxt('Data/factor_hvac.csv', delimiter=',', usecols=1)
 
 ###### DECISION VARIABLE LIST INDEXES ######
@@ -146,7 +142,6 @@ iidx = phidx + 1 + inters # Index of external interconnections, noting pumped hy
 ###### NETWORK CONSTRAINTS ######
 energy = (MLoad).sum() * pow(10, -9) * resolution / years # PWh p.a.
 contingency_ph = list(0.25 * (MLoad).max(axis=0) * pow(10, -3))[:(nodes)] # MW to GW
-print("length of contingency_ph:", len(contingency_ph))
    
 #manage = 0 # weeks
 allowance = min(0.00002*np.reshape(MLoad.sum(axis=1), (-1, 8760)).sum(axis=-1)) # Allowable annual deficit of 0.002%, MWh

@@ -70,7 +70,7 @@ def LPGM(solution):
              'PHES-Storage (MWh),Peaking-Storage (MWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP'
 
-    np.savetxt('Results/LPGM_{}_{}_{}_{}_{}_Network.csv'.format(node,scenario,percapita,import_flag, ac_flag), C, fmt='%s', delimiter=',', header=header, comments='')
+    np.savetxt('Results/LPGM_{}_{}_{}_{}_Network.csv'.format(node,scenario,percapita,import_flag), C, fmt='%s', delimiter=',', header=header, comments='')
 
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
@@ -89,7 +89,7 @@ def LPGM(solution):
             C = np.around(C.transpose())
 
             C = np.insert(C.astype('str'), 0, datentime, axis=1)
-            np.savetxt('Results/LPGM_{}_{}_{}_{}_{}_{}.csv'.format(node,scenario,percapita, import_flag,ac_flag,solution.Nodel[j]), C, fmt='%s', delimiter=',', header=header, comments='')
+            np.savetxt('Results/LPGM_{}_{}_{}_{}_{}.csv'.format(node,scenario,percapita, import_flag,solution.Nodel[j]), C, fmt='%s', delimiter=',', header=header, comments='')
 
     print('Load profiles and generation mix is produced.')
 
@@ -98,7 +98,7 @@ def LPGM(solution):
 def GGTA(solution):
     """GW, GWh, TWh p.a. and A$/MWh information"""
     # Import cost factors
-    factor = np.genfromtxt('Data/factor.csv', dtype=None, delimiter=',', encoding=None)
+    factor = np.genfromtxt('Data/factor_hvac.csv', dtype=None, delimiter=',', encoding=None)
         
     factor = dict(factor)
 
@@ -120,31 +120,32 @@ def GGTA(solution):
        
     # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
     CostT = np.array([factor['SPKP'], factor['KPLP'], factor['LPGP'], factor['GPBP'], factor['BPMP'], factor['EPMP'], factor['TISP'], factor['GILP'], factor['MIMP'], factor['KIEP']])
-    CostDC, CostAC, CDC, CAC = [],[],[],[]
+    CostAC, CostDC, CAC, CDC = [],[],[],[]
 
     for i in range(0,len(CostT)):
-        CostDC.append(CostT[i]) if dc_flags[i] else CostAC.append(CostT[i])
-        CDC.append(solution.CDC[i]) if dc_flags[i] else CAC.append(solution.CDC[i])
-    CostDC, CostAC, CDC, CAC = [np.array(x) for x in [CostDC, CostAC, CDC, CAC]]
+        CostAC.append(CostT[i]) if ac_flags[i] else CostDC.append(CostT[i])
+        CAC.append(solution.CAC[i]) if ac_flags[i] else CDC.append(solution.CDC[i])
+    CostAC, CostDC, CAC, CDC = [np.array(x) for x in [CostAC, CostDC, CAC, CDC]]
     
-    CostDC = (CostDC * CDC).sum() if len(CDC) > 0 else 0 # A$b p.a.
     CostAC = (CostAC * CAC).sum() if len(CAC) > 0 else 0 # A$b p.a.
+    CostDC = (CostDC * CDC).sum() if len(CDC) > 0 else 0 # A$b p.a.
 
     CostAC += factor['ACPV'] * CPV #+ factor['ACWind'] * CWind # A$b p.a.
+
     
     # Calculate the average annual energy demand
     Energy = (MLoad).sum() * pow(10, -9) * resolution / years # TWh p.a.
     #Exports = (indiaExportProfiles.sum() + solution.MSpillage.sum() + solution.MSpillage_exp.sum()) * pow(10,-6) * resolution / years
-    Loss = np.sum(abs(solution.TDC), axis=0) * TLoss
+    Loss = np.sum(abs(solution.TAC), axis=0) * TLoss
     Loss = Loss.sum() * pow(10, -9) * resolution / years # TWh p.a.
 
     # Calculate the levelised cost of elcetricity at a network level
-    LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostDC + CostAC) / (Energy - Loss)
+    LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostAC + CostDC) / (Energy - Loss)
     LCOEPV = CostPV / (Energy - Loss)
     LCOEIndia = CostIndia / (Energy - Loss)
     LCOEHydro = CostHydro / (Energy - Loss)
     LCOEPH = CostPH / (Energy - Loss)
-    LCOEDC = CostDC / (Energy - Loss)
+    #LCOEDC = CostDC / (Energy - Loss)
     LCOEAC = CostAC / (Energy - Loss)
     
     # Calculate the levelised cost of generation
@@ -156,7 +157,7 @@ def GGTA(solution):
     # Calculate the levelised cost of balancing
     LCOB = LCOE - LCOG
     LCOBS_P = CostPH / (Energy - Loss)
-    LCOBT = (CostDC + CostAC) / (Energy - Loss)
+    LCOBT = (CostAC + CostDC) / (Energy - Loss)
     LCOBL = LCOB - LCOBS_P - LCOBT
 
     print('Levelised costs of electricity:')
@@ -171,7 +172,7 @@ def GGTA(solution):
     print('\u2022 LCOB-Transmission:', LCOBT)
     print('\u2022 LCOB-Spillage & loss:', LCOBL)
 
-    size = 20 + len(list(solution.CDC))
+    size = 20 + len(list(solution.CAC))
     D = np.zeros((3, size))
     header = 'Boundary,Annual demand (TWh),Annual Energy Losses (TWh),' \
              'PV Capacity (GW),PV Avg Annual Gen (GWh),Hydro Capacity (GW),Hydro Avg Annual Gen (GWh),Inter Capacity (GW),India Avg Annual Imports (GWh),' \
@@ -183,27 +184,28 @@ def GGTA(solution):
     #Domestic and exports
     D[0, :] = [0,Energy * pow(10, 3), Loss * pow(10, 3), CPV, GPV, CapHydro, GHydro, CInter, GIndia] \
               + [CPHP, CPHS] \
-              + list(solution.CDC) \
+              + list(solution.CAC) \
               + [LCOE, LCOG, LCOB, LCOGP, LCOGH, LCOGI, LCOBS_P, LCOBT, LCOBL] 
 
+    ### DOMESTIC COSTS ONLY
     CostHydro = factor['Hydro'] * (GHydro)
 
-    TDC_domestic = Transmission(solution, domestic_only=True)
-    CDC_domestic_all = np.amax(abs(TDC_domestic), axis=0) * pow(10, -3)
-    Loss_domestic = np.sum(abs(TDC_domestic), axis=0) * TLoss
+    TAC_domestic = Transmission(solution, domestic_only=True)
+    CAC_domestic_all = np.amax(abs(TAC_domestic), axis=0) * pow(10, -3)
+    Loss_domestic = np.sum(abs(TAC_domestic), axis=0) * TLoss
     Loss_domestic = Loss_domestic.sum() * pow(10, -9) * resolution / years # PWh p.a.
     CostDC_domestic, CostAC_domestic, CDC_domestic, CAC_domestic = [],[],[],[]
 
     for i in range(0,len(CostT)):
-        CostDC_domestic.append(CostT[i]) if dc_flags[i] else CostAC_domestic.append(CostT[i])
-        CDC_domestic.append(CDC_domestic_all[i]) if dc_flags[i] else CAC_domestic.append(CDC_domestic_all[i])
-    CostDC_domestic, CostAC_domestic, CDC_domestic, CAC_domestic = [np.array(x) for x in [CostDC_domestic, CostAC_domestic, CDC_domestic, CAC_domestic]]
+        CostAC_domestic.append(CostT[i]) if ac_flags[i] else CostDC_domestic.append(CostT[i])
+        CAC_domestic.append(CAC_domestic_all[i]) if ac_flags[i] else CDC_domestic.append(CAC_domestic_all[i])
+    CostAC_domestic, CostDC_domestic, CAC_domestic, CDC_domestic = [np.array(x) for x in [CostAC_domestic, CostDC_domestic, CAC_domestic, CDC_domestic]]
     
-    CostDC_domestic = (CostDC_domestic * CDC_domestic).sum() if len(CDC_domestic) > 0 else 0 # A$b p.a.
     CostAC_domestic = (CostAC_domestic * CAC_domestic).sum() if len(CAC_domestic) > 0 else 0 # A$b p.a.
-    CostAC_domestic += factor['ACPV'] * CPV  #+ factor['ACWind'] #* CWind # A$b p.a.
+    CostDC_domestic = (CostDC_domestic * CDC_domestic).sum() if len(CAC_domestic) > 0 else 0 # A$b p.a.
+    CostAC_domestic += factor['ACPV'] * CPV   # A$b p.a.
 
-    LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostDC + CostAC) / (Energy - Loss_domestic)
+    LCOE = (CostPV + CostIndia + CostHydro + CostPH  + CostAC + CostDC) / (Energy - Loss_domestic)
 
     LCOG = (CostPV + CostHydro + CostIndia) * pow(10, 3) / (GPV + GHydro + GIndia)
     LCOGH = CostHydro * pow(10, 3) / (GHydro) if (GHydro)!=0 else 0
@@ -211,7 +213,7 @@ def GGTA(solution):
 
     LCOB = LCOE - LCOG
     LCOBS_P = CostPH / (Energy - Loss_domestic)
-    LCOBT = (CostDC_domestic + CostAC_domestic) / (Energy - Loss_domestic)
+    LCOBT = (CostAC_domestic + CostAC_domestic) / (Energy - Loss_domestic)
     LCOBL = LCOB - LCOBS_P - LCOBT
 
     np.savetxt('Results/GGTA_{}_{}_{}_{}.csv'.format(node,scenario,percapita,import_flag), D, fmt='%f', delimiter=',',header=header)
@@ -233,10 +235,10 @@ def Information(x, flexible):
     except AssertionError:
         pass
     
-    S.TDC = Transmission(S,domestic_only=True, output=True)
-    S.CDC = np.amax(abs(S.TDC), axis=0) * pow(10, -3) # CDC(k), MW to GW
+    S.TAC = Transmission(S,domestic_only=True, output=True)
+    S.CAC = np.amax(abs(S.TAC), axis=0) * pow(10, -3) # CAC(k), MW to GW
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
-    S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TDC[:, k], range(S.TDC.shape[1]))
+    S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TAC[:, k], range(S.TAC.shape[1]))
     if 'Super' not in node:
         S.MPV = S.GPV
         S.MIndia = S.GIndia
@@ -284,7 +286,7 @@ def Information(x, flexible):
     return True
 
 if __name__ == '__main__':
-    suffix="_Super_existing_3_True.csv"
+    suffix="_Super_existing_2_True.csv"
     Optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     flexible = np.genfromtxt('Results/Dispatch_IndiaImports{}'.format(suffix), delimiter=',', skip_header=1)
     Information(Optimisation_x, flexible)

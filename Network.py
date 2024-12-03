@@ -122,14 +122,14 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
        # print(f"Max difference between BPMP and BPMP1: {abs(BPMP - BPMP1).max()}")
 
         assert abs(BPMP - BPMP1).max() <= 0.1, print('BPMP Error', abs(BPMP - BPMP1).max())
-        TDC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW
+        TAC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW
         
     else:
-        TDC = np.zeros((intervals, len(solution.TLoss)))
+        TAC = np.zeros((intervals, len(solution.TLoss)))
     if output:
         MStoragePH = np.tile(solution.StoragePH, (nodes, 1)).transpose() * pcfactor # SPH(t, j), MWh
         solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking = (MPV, MIndia, MBaseload, MPeaking)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
 
-    return TDC
+    return TAC

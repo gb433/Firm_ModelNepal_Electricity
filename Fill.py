@@ -82,7 +82,7 @@ def Analysis(optimisation_x,suffix):
     step = 1
     while Deficit.sum() > allowance*years and step < 50:
         imp = fill_deficit(Deficit,imp,sum(S.CInter)*1e3,Indiamax,True,0.8,168)
-        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePond, Spillage = Reliability(S, baseload=baseload, india_imports=imp, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
+        Deficit_energy, Deficit_power, Deficit, DischargePH, DischargePeaking, Spillage = Reliability(S, baseload=baseload, india_imports=imp, daily_peaking=daily_peaking, peaking_hours=peaking_hours)
         step += 1
     print("India generation max:", maxx(imp))
     print("India generation mean:", mean(imp))
@@ -99,6 +99,6 @@ def Analysis(optimisation_x,suffix):
     return True
 
 if __name__=='__main__':
-    suffix = "_Super_existing_3_True.csv"
+    suffix = "_Super_existing_2_True.csv"
     optimisation_x = np.genfromtxt('Results/Optimisation_resultx{}'.format(suffix), delimiter=',')
     Analysis(optimisation_x,suffix)
