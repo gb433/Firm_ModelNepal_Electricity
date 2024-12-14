@@ -80,8 +80,8 @@ def F(x):
         GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
 
     # Transmission capacity calculations
-    TDC = Transmission(S, domestic_only=True, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss)))
-    CDC = np.amax(abs(TDC), axis=0) * pow(10, -3) # CDC(k), MW to GW
+    TAC = Transmission(S, domestic_only=True, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss)))
+    CAC = np.amax(abs(TAC), axis=0) * pow(10, -3) # CDC(k), MW to GW
 
     # Transmission penalty function
     PenDC = 0
@@ -93,9 +93,9 @@ def F(x):
     GIndia = resolution * india_imports.sum() / years / efficiencyPH
 
     # Levelised cost of electricity calculation
-    cost = factor * np.array([sum(S.CPV),0, GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CDC) + [sum(S.CPV),0, (GHydro) * pow(10, -6)]) # $b p.a.
+    cost = factor * np.array([sum(S.CPV),0, GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CAC) + [sum(S.CPV),0, (GHydro) * pow(10, -6)]) # $b p.a.
     cost = cost.sum()
-    loss = np.sum(abs(TDC), axis=0) * TLoss
+    loss = np.sum(abs(TAC), axis=0) * TLoss
     loss = loss.sum() * pow(10, -9) * resolution / years # PWh p.a.
     LCOE = cost / abs(energy - loss) 
 
