@@ -121,8 +121,8 @@ if __name__ == '__main__':
     GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
 
     # Transmission capacity calculations
-    TAC = Transmission(S, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss))) # TAC: TAC(t, k), MW
-    CAC = np.amax(abs(TAC), axis=0) * pow(10, -3) # CAC(k), MW to GW
+    TDC = Transmission(S, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss))) # TAC: TAC(t, k), MW
+    CAC = np.amax(abs(TDC), axis=0) * pow(10, -3) # CAC(k), MW to GW
 
     # Transmission penalty functionS
     PenDC = 0
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # Levelised cost of electricity calculation
     cost = factor * np.array([sum(S.CPV), GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CAC) + [sum(S.CPV), (GHydro) * pow(10, -6), 0, 0]) # $b p.a.
     cost = cost.sum()
-    loss = np.sum(abs(TAC), axis=0) * TLoss
+    loss = np.sum(abs(TDC), axis=0) * TLoss
     loss = loss.sum() * pow(10, -9) * resolution / years # PWh p.a.
     LCOE = cost / abs(energy - loss) 
 

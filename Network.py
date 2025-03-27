@@ -117,13 +117,14 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         #Check the final node
         BPMP1 = 1 *  MImport[:, np.where(Nodel=='MP')[0][0]] - MIMP - EPMP if 'MP' in coverage else np.zeros(intervals)
         assert abs(BPMP - BPMP1).max() <= 0.1, print('BPMP Error', abs(BPMP - BPMP1).max())
-        TAC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW
+        TDC = np.array([SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP ]).transpose() # TDC(t, k), MW
     else:
-        TAC = np.zeros((intervals, len(solution.TLoss)))
+        TDC = np.zeros((intervals, len(solution.TLoss)))
     if output:
         MStoragePH = np.tile(solution.StoragePH, (nodes, 1)).transpose() * pcfactor # SPH(t, j), MWh
         solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking = (MPV, MIndia, MBaseload, MPeaking)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
-        
-    return TAC
+        #solution.MBaseload_exp, solution.MPV_exp, solution.MPeaking_exp = (MBaseload_exp, MPV_exp, MPeaking_exp)
+
+    return TDC

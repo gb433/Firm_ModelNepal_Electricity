@@ -16,7 +16,7 @@ parser.add_argument('-m', default=0.5, type=float, required=False, help='mutatio
 parser.add_argument('-r', default=0.3, type=float, required=False, help='recombination=0.3')
 parser.add_argument('-e', default=2, type=int, required=False, help='per-capita electricity = 2, 5, 9 MWh/year')
 parser.add_argument('-n', default='Super', type=str, required=False, help='Super, SP, KP...')
-parser.add_argument('-s', default='existing', type=str, required=False, help='existing,underconstruction')
+parser.add_argument('-s', default='existing', type=str, required=False, help='existing,construction')
 parser.add_argument('-y', default='import', type=str, required=False, help='import, no_import')
 #parser.add_argument('-f', default='HVAC', type=str, required=False, help='ac_flag, no_import')
 args = parser.parse_args()
@@ -80,8 +80,8 @@ def F(x):
         GPHES = DischargePH.sum() * resolution / years * pow(10,-6) # TWh per year
 
     # Transmission capacity calculations
-    TAC = Transmission(S, domestic_only=True, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss)))
-    CAC = np.amax(abs(TAC), axis=0) * pow(10, -3) # CDC(k), MW to GW
+    TDC = Transmission(S, domestic_only=True, output=True) if 'Super' in node else np.zeros((intervals, len(TLoss)))
+    CAC = np.amax(abs(TDC), axis=0) * pow(10, -3) # CDC(k), MW to GW
 
     # Transmission penalty function
     PenDC = 0
@@ -95,7 +95,7 @@ def F(x):
     # Levelised cost of electricity calculation
     cost = factor * np.array([sum(S.CPV),0, GIndia * pow(10,-6), sum(S.CPHP), S.CPHS, GPHES] + list(CAC) + [sum(S.CPV),0, (GHydro) * pow(10, -6)]) # $b p.a.
     cost = cost.sum()
-    loss = np.sum(abs(TAC), axis=0) * TLoss
+    loss = np.sum(abs(TDC), axis=0) * TLoss
     loss = loss.sum() * pow(10, -9) * resolution / years # PWh p.a.
     LCOE = cost / abs(energy - loss) 
 

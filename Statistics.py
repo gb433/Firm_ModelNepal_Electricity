@@ -120,15 +120,15 @@ def GGTA(solution):
        
     # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
     CostT = np.array([factor['SPKP'], factor['KPLP'], factor['LPGP'], factor['GPBP'], factor['BPMP'], factor['EPMP'], factor['TISP'], factor['GILP'], factor['MIMP'], factor['KIEP']])
-    CostAC, CostDC, CAC, CDC = [],[],[],[]
+    CostAC, CAC = [],[]
 
     for i in range(0,len(CostT)):
-        CostAC.append(CostT[i]) if ac_flags[i] else CostDC.append(CostT[i])
-        CAC.append(solution.CAC[i]) if ac_flags[i] else CDC.append(solution.CDC[i])
-    CostAC, CostDC, CAC, CDC = [np.array(x) for x in [CostAC, CostDC, CAC, CDC]]
+        CostAC.append(CostT[i]) #if ac_flags[i] else CostDC.append(CostT[i])
+        #CAC.append(solution.CAC[i]) if ac_flags[i] else CDC.append(solution.CDC[i])
+    CostAC, CAC = [np.array(x) for x in [CostAC, CAC]]
     
     CostAC = (CostAC * CAC).sum() if len(CAC) > 0 else 0 # A$b p.a.
-    CostDC = (CostDC * CDC).sum() if len(CDC) > 0 else 0 # A$b p.a.
+    #CostDC = (CostDC * CDC).sum() if len(CDC) > 0 else 0 # A$b p.a.
 
     CostAC += factor['ACPV'] * CPV #+ factor['ACWind'] * CWind # A$b p.a.
 
@@ -136,11 +136,11 @@ def GGTA(solution):
     # Calculate the average annual energy demand
     Energy = (MLoad).sum() * pow(10, -9) * resolution / years # TWh p.a.
     #Exports = (indiaExportProfiles.sum() + solution.MSpillage.sum() + solution.MSpillage_exp.sum()) * pow(10,-6) * resolution / years
-    Loss = np.sum(abs(solution.TAC), axis=0) * TLoss
+    Loss = np.sum(abs(solution.TDC), axis=0) * TLoss
     Loss = Loss.sum() * pow(10, -9) * resolution / years # TWh p.a.
 
     # Calculate the levelised cost of elcetricity at a network level
-    LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostAC + CostDC) / (Energy - Loss)
+    LCOE = (CostPV + CostIndia + CostHydro + CostPH + CostAC) / (Energy - Loss)
     LCOEPV = CostPV / (Energy - Loss)
     LCOEIndia = CostIndia / (Energy - Loss)
     LCOEHydro = CostHydro / (Energy - Loss)
@@ -157,7 +157,7 @@ def GGTA(solution):
     # Calculate the levelised cost of balancing
     LCOB = LCOE - LCOG
     LCOBS_P = CostPH / (Energy - Loss)
-    LCOBT = (CostAC + CostDC) / (Energy - Loss)
+    LCOBT = (CostAC) / (Energy - Loss)
     LCOBL = LCOB - LCOBS_P - LCOBT
 
     print('Levelised costs of electricity:')
@@ -190,30 +190,30 @@ def GGTA(solution):
     ### DOMESTIC COSTS ONLY
     CostHydro = factor['Hydro'] * (GHydro)
 
-    TAC_domestic = Transmission(solution, domestic_only=True)
-    CAC_domestic_all = np.amax(abs(TAC_domestic), axis=0) * pow(10, -3)
-    Loss_domestic = np.sum(abs(TAC_domestic), axis=0) * TLoss
+    TDC_domestic = Transmission(solution, domestic_only=True)
+    CAC_domestic_all = np.amax(abs(TDC_domestic), axis=0) * pow(10, -3)
+    Loss_domestic = np.sum(abs(TDC_domestic), axis=0) * TLoss
     Loss_domestic = Loss_domestic.sum() * pow(10, -9) * resolution / years # PWh p.a.
-    CostDC_domestic, CostAC_domestic, CDC_domestic, CAC_domestic = [],[],[],[]
+    CostAC_domestic, CAC_domestic = [],[]
 
     for i in range(0,len(CostT)):
-        CostAC_domestic.append(CostT[i]) if ac_flags[i] else CostDC_domestic.append(CostT[i])
-        CAC_domestic.append(CAC_domestic_all[i]) if ac_flags[i] else CDC_domestic.append(CAC_domestic_all[i])
-    CostAC_domestic, CostDC_domestic, CAC_domestic, CDC_domestic = [np.array(x) for x in [CostAC_domestic, CostDC_domestic, CAC_domestic, CDC_domestic]]
+        CostAC_domestic.append(CostT[i]) #if ac_flags[i] else CostDC_domestic.append(CostT[i])
+       # CAC_domestic.append(CAC_domestic_all[i]) if ac_flags[i] else CDC_domestic.append(CAC_domestic_all[i])
+    CostAC_domestic, CAC_domestic = [np.array(x) for x in [CostAC_domestic, CAC_domestic]]
     
     CostAC_domestic = (CostAC_domestic * CAC_domestic).sum() if len(CAC_domestic) > 0 else 0 # A$b p.a.
-    CostDC_domestic = (CostDC_domestic * CDC_domestic).sum() if len(CAC_domestic) > 0 else 0 # A$b p.a.
+   # CostDC_domestic = (CostDC_domestic * CDC_domestic).sum() if len(CAC_domestic) > 0 else 0 # A$b p.a.
     CostAC_domestic += factor['ACPV'] * CPV   # A$b p.a.
 
-    LCOE = (CostPV + CostIndia + CostHydro + CostPH  + CostAC + CostDC) / (Energy - Loss_domestic)
+    LCOE = (CostPV + CostIndia + CostHydro + CostPH  + CostAC) / (Energy - Loss_domestic)
 
     LCOG = (CostPV + CostHydro + CostIndia) * pow(10, 3) / (GPV + GHydro + GIndia)
     LCOGH = CostHydro * pow(10, 3) / (GHydro) if (GHydro)!=0 else 0
     LCOGI = CostIndia * pow(10, 3) / GIndia if GIndia != 0 else 0
-
+# Calculate the levelised cost
     LCOB = LCOE - LCOG
     LCOBS_P = CostPH / (Energy - Loss_domestic)
-    LCOBT = (CostAC_domestic + CostAC_domestic) / (Energy - Loss_domestic)
+    LCOBT = (CostAC_domestic) / (Energy - Loss_domestic)
     LCOBL = LCOB - LCOBS_P - LCOBT
 
     np.savetxt('Results/GGTA_{}_{}_{}_{}.csv'.format(node,scenario,percapita,import_flag), D, fmt='%f', delimiter=',',header=header)
@@ -235,10 +235,10 @@ def Information(x, flexible):
     except AssertionError:
         pass
     
-    S.TAC = Transmission(S,domestic_only=True, output=True)
-    S.CAC = np.amax(abs(S.TAC), axis=0) * pow(10, -3) # CAC(k), MW to GW
+    S.TDC = Transmission(S,domestic_only=True, output=True)
+    S.CAC = np.amax(abs(S.TDC), axis=0) * pow(10, -3) # CAC(k), MW to GW
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
-    S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TAC[:, k], range(S.TAC.shape[1]))
+    S.SPKP, S.KPLP, S.LPGP, S.GPBP, S.BPMP, S.EPMP, S.TISP, S.GILP, S.MIMP, S.KIEP = map(lambda k: S.TDC[:, k], range(S.TDC.shape[1]))
     if 'Super' not in node:
         S.MPV = S.GPV
         S.MIndia = S.GIndia

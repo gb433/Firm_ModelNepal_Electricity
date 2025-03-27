@@ -10,7 +10,7 @@ from Optimisation import scenario, node, percapita, import_flag
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 3 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
-pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22., 34.] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
+pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22., 20. ] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
 phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
 
 
@@ -70,13 +70,7 @@ for i in range(0, MLoad.shape[0]):
         else:
             # Carry forward the previous day's peaking values
             daily_peaking[i, j] = daily_peaking[i - 1, j] if i > 0 else 0
-
-# Print results for verification
-print("Baseload Generation:")
-print(baseload)
-
-print("Daily Peaking Generation:")
-print(daily_peaking)  
+ 
          
 ###### CONSTRAINTS ######
 # Energy constraints
@@ -142,6 +136,7 @@ iidx = phidx + 1 + inters # Index of external interconnections, noting pumped hy
 ###### NETWORK CONSTRAINTS ######
 energy = (MLoad).sum() * pow(10, -9) * resolution / years # PWh p.a.
 contingency_ph = list(0.25 * (MLoad).max(axis=0) * pow(10, -3))[:(nodes)] # MW to GW
+
    
 #manage = 0 # weeks
 allowance = min(0.00002*np.reshape(MLoad.sum(axis=1), (-1, 8760)).sum(axis=-1)) # Allowable annual deficit of 0.002%, MWh
