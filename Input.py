@@ -10,9 +10,8 @@ from Optimisation import scenario, node, percapita, import_flag
 
 Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI'])
 PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 3 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
-pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22., 20.] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
-phes_ub_np = np.array([55.] + [120.] + [368.] + [552.] + [13.] + [126.] + [94.] + [0.] + [0.] + [0.] + [0.])
-
+pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22., 20. ] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
+phes_ub_np = np.array([50.] + [100.] + [50.] + [50.] + [50.] + [20.] + [100.] + [0.] + [0.] + [0.] + [0.])
 
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
@@ -27,7 +26,7 @@ constraints = np.genfromtxt('Data/constraints_{}.csv'.format(scenario), dtype=No
 
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
-    # expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
+    
 elif scenario == 'construction':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
 elif scenario == 'all':
@@ -38,38 +37,29 @@ CHydro_max, CHydro_RoR, CHydro_Peaking = [assets[:, x] * pow(10, -3) for x in ra
 EHydro = constraints[:, 0] # GWh per year
 hydroProfiles = np.genfromtxt('Data/RoR_{}.csv'.format(scenario), delimiter=',', skip_header=1, usecols=range(4,4+len(Nodel)), encoding=None).astype(float)
 
+# Define constants
 peaking_hours = 4
-peaking_start = 18 #6 PM
-peaking_end = peaking_start + peaking_hours #6PM to 10PM
-# Calculate baseload and daily peaking hydropower
-baseload = np.ones((MLoad.shape[0], len(CHydro_max)))
-daily_peaking = np.zeros((MLoad.shape[0], len(CHydro_max)))
+peaking_start = 18
+peaking_end = peaking_start + peaking_hours
 
-for i in range(0, MLoad.shape[0]):
-    for j in range(0, len(CHydro_RoR)):
-        baseload[i, j] = min(hydroProfiles[i, j], CHydro_RoR[j] * pow(10, 3)) if CHydro_Peaking[j] != 0 else hydroProfiles[i, j]
-        
-    # Update daily peaking calculation
-        if i % 24 == 0:  # At the start of a new day
-            daily_peaking_sum = 0  # Reset daily peaking sum for the new day
+# Create base arrays
+baseload = np.minimum(hydroProfiles, CHydro_RoR * 1e3)  # MW
+daily_peaking = np.zeros_like(hydroProfiles)
 
-            # Loop through the next 24 hours to calculate daily peaking
-            for k in range(24):
-                hour_index = i + k
+# Time index for hours in a day (0 to 23)
+hourly_index = np.arange(MLoad.shape[0]) % 24
 
-                if hour_index < MLoad.shape[0]:  # Ensure index is within bounds
-                    if peaking_start <= (k % 24) < peaking_end:  # Only consider peaking hours
-                        # Peaking generation is the difference between total generation and baseload, capped by hourly peaking capacity
-                        hourly_peaking = max(0, hydroProfiles[hour_index, j] - baseload[hour_index, j])
-                        capped_peaking = min(hourly_peaking, CHydro_Peaking[j] * pow(10, 3))  # MW limit
+# Boolean mask for peaking hours
+is_peaking_hour = (hourly_index >= peaking_start) & (hourly_index < peaking_end)
 
-                        daily_peaking[hour_index, j] = capped_peaking
-                        daily_peaking_sum += capped_peaking
-                    else:
-                        daily_peaking[hour_index, j] = 0  # No peaking generation outside the peaking window
-        else:
-            # Carry forward the previous day's peaking values
-            daily_peaking[i, j] = daily_peaking[i - 1, j] if i > 0 else 0
+# Loop through nodes only
+for j in range(len(CHydro_RoR)):
+    # Only apply peaking if capacity exists
+    if CHydro_Peaking[j] > 0:
+        # Excess generation available over baseload
+        peaking_excess = hydroProfiles[:, j] - baseload[:, j]
+        peaking_excess = np.clip(peaking_excess, 0, CHydro_Peaking[j] * 1e3)  # Cap by peaking MW
+        daily_peaking[:, j] = peaking_excess * is_peaking_hour
  
          
 ###### CONSTRAINTS ######

@@ -34,8 +34,9 @@ def Debug(solution):
         else:
             assert abs(StoragePH[i] - StoragePH[i - 1] + DischargePH[i] * resolution - ChargePH[i] * resolution * efficiencyPH) <= 1
 
-        # Capacity: PV, wind, Discharge, Charge and Storage
+        # Capacity: PV, Discharge, Charge and Storage
         try:
+            assert np.amax(PV) - sum(solution.CPV) * pow(10, 3) <= 0.1, print("PV",np.amax(PV) - sum(solution.CPV) * pow(10, 3))
             assert np.amax(India) - sum(solution.CInter) * pow(10,3) <= 0.1
 
             assert np.amax(DischargePH) - sum(solution.CPHP) * pow(10, 3) <= 0.1, print("DischargePH",np.amax(DischargePH) - sum(solution.CPHP) * pow(10, 3))
@@ -66,7 +67,7 @@ def LPGM(solution):
     C = np.insert(C.astype('str'), 0, datentime, axis=1)
 
     header = 'Date & time,Operational demand,' \
-             'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW), PHES-Charge (MW),' \
+             'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), Energy Spillage (MW), PHES-Charge (MW),' \
              'PHES-Storage (MWh),Peaking-Storage (MWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP'
 
@@ -74,7 +75,7 @@ def LPGM(solution):
 
     if 'Super' in node:
         header = 'Date & time,Operational demand,' \
-                 'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), India Exports (MW),'\
+                 'RoR Hydropower (MW),Peaking Hydropower (MW), India Imports (MW),Solar photovoltaics (MW),PHES-Discharge (MW),Energy deficit (MW), Energy Spillage (MW),'\
                  'Transmission,PHES-Charge (MW),' \
                  'PHES-Storage,'
         Topology = solution.Topology[np.where(np.in1d(Nodel, coverage) == True)[0]]
@@ -135,7 +136,7 @@ def GGTA(solution):
     
     # Calculate the average annual energy demand
     Energy = (MLoad).sum() * pow(10, -9) * resolution / years # TWh p.a.
-    #Exports = (indiaExportProfiles.sum() + solution.MSpillage.sum() + solution.MSpillage_exp.sum()) * pow(10,-6) * resolution / years
+    #Exports = (solution.MSpillage.sum() + solution.MSpillage_exp.sum()) * pow(10,-6) * resolution / years
     Loss = np.sum(abs(solution.TDC), axis=0) * TLoss
     Loss = Loss.sum() * pow(10, -9) * resolution / years # TWh p.a.
 
@@ -175,13 +176,13 @@ def GGTA(solution):
     size = 20 + len(list(solution.CAC))
     D = np.zeros((3, size))
     header = 'Boundary,Annual demand (TWh),Annual Energy Losses (TWh),' \
-             'PV Capacity (GW),PV Avg Annual Gen (GWh),Hydro Capacity (GW),Hydro Avg Annual Gen (GWh),Inter Capacity (GW),India Avg Annual Imports (GWh),' \
+             'PV Capacity (GW),PV Avg Annual Gen (TWh),Hydro Capacity (GW),Hydro Avg Annual Gen (TWh),Inter Capacity (GW),India Avg Annual Imports (TWh),' \
              'PHES-PowerCap (GW),PHES-EnergyCap (GWh),' \
              'SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP,' \
              'LCOE,LCOG,LCOB,LCOG_PV,LCOG_Hydro,LCOG_IndiaImports,LCOBS_PHES,LCOBT,LCOBL'
     
     ### ALL IN COSTS
-    #Domestic and exports
+    #Domestic and Imports
     D[0, :] = [0,Energy * pow(10, 3), Loss * pow(10, 3), CPV, GPV, CapHydro, GHydro, CInter, GIndia] \
               + [CPHP, CPHS] \
               + list(solution.CAC) \
@@ -250,19 +251,6 @@ def Information(x, flexible):
 
     S.MPHS = S.CPHS * np.array(S.CPHP) * pow(10, 3) / sum(S.CPHP) # GW to MW
 
-    # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
-    # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
-    # S.Topology = np.array([S.TISP - S.SPKP,                     # SP
-    #              (S.SPKP + S.KPLP),                             # KP
-    #               S.GILP - S.KPLP + S.LPGP,                     # LP
-    #               -1 * (S.LPGP + S.GPBP),                       # GP
-    #               S.GPBP + S.BPMP,                              # BP
-    #               (S.MIMP - S.BPMP + S.EPMP),                   # MP
-    #               -1* (S.EPMP + S.KIEP),                        # EP
-    #               -1 * S.TISP,                                  # TI
-    #               -1 * S.GILP,                                  # GI
-    #               -1 * S.MIMP,                                  # MI
-    #               S.KIEP])                                      # KI
 
     # SPKP, KPLP, LPGP, GPBP, BPMP, EPMP, TISP, GILP, MIMP, KIEP
     # 'SP' 'KP' 'LP' 'GP' 'BP' 'MP' 'EP' 'TI' 'GI' 'MI' 'KI'
