@@ -33,6 +33,9 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     spfactor = np.divide(MPW, MPW.sum(axis=1)[:, None], where=MPW.sum(axis=1)[:, None]!=0)
     MSpillage = np.tile(solution.Spillage, (nodes, 1)).transpose() * spfactor # MSpillage: ESP(j, t)
 
+    # Compute Export (based on MSpillage and interconnection limits)
+    CInter = np.append(np.array([0] * (nodes - len(solution.CInter))), np.nan_to_num(np.array(solution.CInter))) * 1e3  # MW
+
     CIndia = np.append(np.array([0]*(nodes - len(solution.CInter))), np.nan_to_num(np.array(solution.CInter))) # GW
     CPHP = solution.CPHP
     pcfactor = np.tile(CPHP, (intervals, 1)) / sum(CPHP) if sum(CPHP) != 0 else 0
@@ -45,53 +48,15 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
     else:
         ifactor = np.tile(CIndia, (intervals, 1)) / CIndia.sum()
     MIndia = np.tile(india_imports, (nodes, 1)).transpose() * ifactor
+    MExport = np.tile(solution.IndiaExport, (nodes, 1)).T * spfactor
+    solution.MExport = MExport
 
-   # efactor = np.array([0,0,0,0,0,0,0,1,0,0,0])
-    #ch2factor = np.array([0,1,0,0,0,0,0,0,0,0,0])
-   # MExport = np.tile(solution.indiaExportProfiles, (nodes, 1)).transpose() * efactor
-   # MHydro_CH2 = np.tile(solution.indiaExportProfiles, (nodes, 1)).transpose() * ch2factor
-
-    """  CHydro_nodes = np.zeros(nodes)
-    for j in range(0,len(Nodel)):
-        CHydro_nodes[j] = solution.CHydro_max[expl==Nodel[j]].sum()
-    expfactor = np.tile(CHydro_nodes, (intervals, 1)) / sum(CHydro_nodes) if sum(CHydro_nodes) != 0 else 0
-    MSpillage_exp = np.tile(solution.Spillage, (nodes, 1)).transpose() * expfactor # MSpillage: ESP(j, t)
-    MSpillage = np.zeros((nodes, intervals)).transpose() """
-
-    """ BaseloadDomestic = MChargePH.sum(axis=1) + MLoad.sum(axis=1) - MIndia.sum(axis=1) - MDischargePH.sum(axis=1) - MDeficit.sum(axis=1)
-    BaseloadDomestic[BaseloadDomestic < 0] = 0
-    BaseloadExports = MBaseload.sum(axis=1) - BaseloadDomestic
-    BaseloadExports[BaseloadExports < 0] = 0
-    b1factor = np.divide(MBaseload, MBaseload.sum(axis=1)[:, None], where=MBaseload.sum(axis=1)[:, None]!=0)
-    MBaseload_exp  = np.tile(BaseloadExports, (nodes, 1)).transpose() * b1factor """
-
-    """ SolarDomestic = MChargePH.sum(axis=1) + MLoad.sum(axis=1) - MIndia.sum(axis=1) - MBaseload.sum(axis=1) - MDischargePH.sum(axis=1) - MDeficit.sum(axis=1)
-    SolarDomestic[SolarDomestic < 0] = 0
-    SolarExports = MPV.sum(axis=1) - SolarDomestic        
-    SolarExports[SolarExports < 0] = 0
-    s1factor = np.divide(MPV, MPV.sum(axis=1)[:, None], where=MPV.sum(axis=1)[:, None]!=0)
-    MPV_exp  = np.tile(SolarExports, (nodes, 1)).transpose() * s1factor """
-        
-   # WindDomestic = MChargePH.sum(axis=1) + MLoad.sum(axis=1) - MIndia.sum(axis=1) - MBaseload.sum(axis=1) - MPV.sum(axis=1) - MDischargePH.sum(axis=1) - MDeficit.sum(axis=1)
-   # WindDomestic[WindDomestic < 0] = 0
-   # WindExports = MWind.sum(axis=1) - WindDomestic      
-    #WindExports[WindExports < 0] = 0  
-    #w1factor = np.divide(MWind, MWind.sum(axis=1)[:, None], where=MWind.sum(axis=1)[:, None]!=0)
-    #MWind_exp  = np.tile(WindExports, (nodes, 1)).transpose() * w1factor
-
-    """ PeakingDomestic = MChargePH.sum(axis=1) + MLoad.sum(axis=1) - MPV.sum(axis=1) - MIndia.sum(axis=1) - MBaseload.sum(axis=1) - MDischargePH.sum(axis=1) - MDeficit.sum(axis=1)
-    PeakingDomestic[PeakingDomestic < 0] = 0
-    PeakingExports = MPeaking.sum(axis=1) - PeakingDomestic
-    PeakingExports[PeakingExports < 0]
-    p1factor = np.divide(MPeaking, MPeaking.sum(axis=1)[:, None], where=MPeaking.sum(axis=1)[:, None]!=0)
-    MPeaking_exp  = np.tile(PeakingExports, (nodes, 1)).transpose() * p1factor """
     if domestic_only:
         MImport = MLoad + MChargePH + MSpillage \
-                - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit # EIM(t, j), MW
-    """ else:
-        MImport = MLoad + MChargePH + MSpillage_exp + MSpillage \
-              - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW """
-    
+                - MPV - MIndia - MBaseload - MPeaking - MDischargePH - MDeficit  # EIM(t, j), MW
+
+
+        
     coverage = solution.coverage
     if len(coverage) > 1:
 
@@ -125,6 +90,7 @@ def Transmission(solution, domestic_only=False, export_only=False, output=False)
         solution.MPV, solution.MIndia, solution.MBaseload, solution.MPeaking = (MPV, MIndia, MBaseload, MPeaking)
         solution.MDischargePH, solution.MChargePH, solution.MStoragePH = (MDischargePH, MChargePH, MStoragePH)
         solution.MDeficit, solution.MSpillage = (MDeficit, MSpillage)
-        #solution.MBaseload_exp, solution.MPV_exp, solution.MPeaking_exp = (MBaseload_exp, MPV_exp, MPeaking_exp)
+        solution.MExport = MExport
+        
 
     return TDC

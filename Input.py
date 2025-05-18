@@ -4,7 +4,7 @@
 # Correspondence: bin.lu@anu.edu.au
 
 import numpy as np
-from Optimisation import scenario, node, percapita, import_flag
+from Optimisation import scenario, node, percapita, import_flag, export_flag
 
 ###### NODAL LISTS ######
 
@@ -12,6 +12,7 @@ Nodel = np.array(['SP', 'KP', 'LP', 'GP', 'BP', 'MP', 'EP', 'TI','GI', 'MI', 'KI
 PVl = np.array(['SP'] * 3 + ['KP'] * 3 + ['LP'] * 2 + ['GP'] * 3 + ['BP'] * 3 + ['MP'] * 3 + ['EP'] * 6)
 pv_ub_np = np.array([22., 28., 15.] + [12., 18., 27.] + [22., 24.] + [25., 22., 20. ] + [18., 30., 14.] + [12., 19., 10.] + [17., 18., 14., 11., 10., 12.])
 phes_ub_np = np.array([50.] + [100.] + [50.] + [50.] + [50.] + [20.] + [100.] + [0.] + [0.] + [0.] + [0.])
+
 
 # Add external interconnections 
 Interl = np.array(['TI']*1 + ['GI']*1 + ['MI']*1 + ['KI']*1) if node == 'Super' else np.array([])
@@ -26,7 +27,7 @@ constraints = np.genfromtxt('Data/constraints_{}.csv'.format(scenario), dtype=No
 
 if scenario == 'existing':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
-    
+    # expl = np.array(['TI']*6+['GI']*2+['MI']*2+['KI']*1)
 elif scenario == 'construction':
     hydrol = np.array(['SP']*1+['KP']*1+['LP']*1+['GP']*1+['BP']*1+['MP']*1+['EP']*1)
 elif scenario == 'all':
@@ -60,7 +61,7 @@ for j in range(len(CHydro_RoR)):
         peaking_excess = hydroProfiles[:, j] - baseload[:, j]
         peaking_excess = np.clip(peaking_excess, 0, CHydro_Peaking[j] * 1e3)  # Cap by peaking MW
         daily_peaking[:, j] = peaking_excess * is_peaking_hour
- 
+
          
 ###### CONSTRAINTS ######
 # Energy constraints
@@ -81,6 +82,7 @@ TLoss = []
 # ['SPKP', 'KPLP', 'LPGP', 'GPBP', 'BPMP', 'EPMP', 'TISP', 'GILP', 'MIMP', 'KIEP']
 TDistances = [131, 178, 75, 149, 122, 197, 16, 40, 78, 26]
 TDistances = np.array(TDistances)
+
 for i in range(0,len(ac_flags)):
     TLoss.append(TDistances[i]*0.07) if ac_flags[i] else TLoss.append(TDistances[i]*0.03)
 TLoss = np.array(TLoss)* pow(10, -3)
@@ -114,15 +116,17 @@ else:
 
     Nodel, PVl, Interl = [x[np.where(np.in1d(x, coverage)==True)[0]] for x in (Nodel, PVl, Interl)]
     
-    factor = np.genfromtxt('Data/factor_hvac.csv', delimiter=',', usecols=1)
+    
 
 ###### DECISION VARIABLE LIST INDEXES ######
 intervals, nodes = MLoad.shape
 years = int(resolution * intervals / 8760)
-pzones = TSPV.shape[1] # Solar PV and wind sites
-pidx, phidx = (pzones, pzones + nodes) # Index of solar PV (sites), wind (sites), pumped hydro power (service areas)
+pzones = TSPV.shape[1] # Solar PV sites
+pidx, phidx = (pzones, pzones + nodes) # Index of solar PV (sites), pumped hydro power (service areas)
 inters = len(Interl) # Number of external interconnections
 iidx = phidx + 1 + inters # Index of external interconnections, noting pumped hydro energy (network) 
+
+
 ###### NETWORK CONSTRAINTS ######
 energy = (MLoad).sum() * pow(10, -9) * resolution / years # PWh p.a.
 contingency_ph = list(0.25 * (MLoad).max(axis=0) * pow(10, -3))[:(nodes)] # MW to GW
@@ -137,6 +141,7 @@ pv_ub = [x for x in pv_ub_np]
 phes_ub = [x for x in phes_ub_np]
 phes_s_ub = [10000.]
 inters_ub = [500.] * inters if node == 'Super' else inters * [0]
+
 
 ###### DECISION VARIABLE LOWER BOUNDS ######
 pv_lb = [.001] * pzones
@@ -166,12 +171,14 @@ class Solution:
 
         self.CInter = list(x[phidx+1: ]) if node == 'Super' else len(Interl)*[0] #CInter(j), GW
         self.GIndia = np.tile(self.CInter, (intervals, 1)) * pow(10,3) # GInter(j, t), GW to MW
+        self.IndiaExport = np.zeros(intervals)  # MW
 
         self.Nodel, self.PVl, self.Hydrol = (Nodel, PVl, hydrol)
         self.Interl = Interl
         self.node = node
         self.scenario = scenario
         self.import_flag = import_flag
+        self.export_flag = export_flag
         self.allowance = allowance
         self.coverage = coverage
         self.TLoss = TLoss
